@@ -11,7 +11,9 @@ const variantMats = new Map();
 
 export function loadSoldier(url = './models/soldier.glb') {
   if (!loading) {
-    loading = new GLTFLoader().loadAsync(url).then((gltf) => {
+    // hospedagens que não servem .glb podem fornecer o modelo embutido num módulo JS
+    const src = window.IZ_SOLDIER_MODULE ? import(window.IZ_SOLDIER_MODULE).then((m) => m.default) : Promise.resolve(url);
+    loading = src.then((u) => new GLTFLoader().loadAsync(u)).then((gltf) => {
       base = gltf.scene; clips = {};
       for (const c of gltf.animations) clips[c.name] = c;
       base.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
