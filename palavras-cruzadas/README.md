@@ -10,7 +10,7 @@ Clique ou toque numa casa e digite. Clicar de novo na mesma casa troca entre hor
 
 ## Conteúdo
 - **1.104 palavras com dicas educativas** em 20 temas: casa, animais, alimentos, corpo humano e saúde, natureza, cores, países, Brasil, ciências, matemática, profissões, esportes e lazer, música e arte, transportes, língua portuguesa, tecnologia, história e cidadania, sentimentos, verbos e espaço.
-- **Gerador de cruzadas:** cada nível monta uma grade com o máximo de cruzamentos. Os níveis da campanha são sempre os mesmos; o jogo livre sorteia uma grade nova a cada partida.
+- **Gerador de cruzadas:** cada partida monta uma grade nova com o máximo de cruzamentos. Só o desafio diário é igual para todo mundo.
 
 ## Modos e progressão
 - **Campanha:** 20 mundos e 123 níveis. O número de níveis de cada mundo depende do tamanho do tema, e as cruzadas crescem a cada nível. Cada nível dá de 1 a 3 estrelas, e completar 60% de um mundo libera o seguinte.
