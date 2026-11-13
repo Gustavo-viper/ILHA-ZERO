@@ -1,22 +1,22 @@
 extends Node
 ## Singleton global (autoload "Game"): dados do jogo, controles, configurações e hardware.
 
-const MAP_SIZE := 1800.0
-const HALF := MAP_SIZE * 0.5
-const GRID := 4.0                       # resolução do relevo (m)
-const GRID_N := int(MAP_SIZE / GRID) + 1
-const WATER_LEVEL := 0.0
-const PORT := 7777
+const MAP_SIZE = 1800.0
+const HALF = MAP_SIZE * 0.5
+const GRID = 4.0                       # resolução do relevo (m)
+const GRID_N = int(MAP_SIZE / GRID) + 1
+const WATER_LEVEL = 0.0
+const PORT = 7777
 
 # Camadas de física
-const L_WORLD := 1        # terreno, casas, árvores
-const L_BODY := 2         # cápsulas dos soldados (colisão de movimento)
-const L_HITBOX := 4       # hitboxes (cabeça/tronco/pernas) atingidas por balas
-const L_LOOT := 8
+const L_WORLD = 1        # terreno, casas, árvores
+const L_BODY = 2         # cápsulas dos soldados (colisão de movimento)
+const L_HITBOX = 4       # hitboxes (cabeça/tronco/pernas) atingidas por balas
+const L_LOOT = 8
 
 # ---------------------------------------------------------------- armas
 # vel = velocidade do projétil (m/s) → queda de bala realista
-const WEAPONS := {
+const WEAPONS = {
 	"p9":     {"name": "Pistola P-9",       "ammo": "9mm", "dmg": 24.0, "rpm": 400.0, "mag": 15, "reload": 1.8, "vel": 360.0, "hip": 0.030, "ads": 0.010, "recoil": 0.012, "auto": false, "pellets": 1, "slot": 2, "scope": 1.0, "len": 0.25},
 	"vespa":  {"name": "SMG Vespa",         "ammo": "9mm", "dmg": 22.0, "rpm": 820.0, "mag": 30, "reload": 2.1, "vel": 400.0, "hip": 0.028, "ads": 0.008, "recoil": 0.010, "auto": true,  "pellets": 1, "slot": 0, "scope": 1.0, "len": 0.6},
 	"ar7":    {"name": "Fuzil AR-7",        "ammo": "556", "dmg": 41.0, "rpm": 700.0, "mag": 30, "reload": 2.3, "vel": 880.0, "hip": 0.030, "ads": 0.004, "recoil": 0.016, "auto": true,  "pellets": 1, "slot": 0, "scope": 1.0, "len": 0.95},
@@ -28,23 +28,23 @@ const WEAPONS := {
 	"trovao": {"name": "Sniper Trovão ★",   "ammo": "300", "dmg": 105.0, "rpm": 45.0, "mag": 5,  "reload": 3.5, "vel": 910.0, "hip": 0.050, "ads": 0.0004, "recoil": 0.07,  "auto": false, "pellets": 1, "slot": 0, "scope": 8.0, "len": 1.35},
 	"m9":     {"name": "Metralhadora M-9 ★", "ammo": "556", "dmg": 40.0, "rpm": 900.0, "mag": 75, "reload": 4.5, "vel": 880.0, "hip": 0.035, "ads": 0.006, "recoil": 0.014, "auto": true,  "pellets": 1, "slot": 0, "scope": 1.0, "len": 1.1},
 }
-const AMMO := {"9mm": 30, "556": 30, "762": 30, "12g": 10, "300": 10}
-const AMMO_NAME := {"9mm": "Munição 9mm", "556": "Munição 5.56", "762": "Munição 7.62", "12g": "Cartucho 12", "300": "Munição .300"}
+const AMMO = {"9mm": 30, "556": 30, "762": 30, "12g": 10, "300": 10}
+const AMMO_NAME = {"9mm": "Munição 9mm", "556": "Munição 5.56", "762": "Munição 7.62", "12g": "Cartucho 12", "300": "Munição .300"}
 
 # cura: tempo de uso, hp alvo/limite, boost
-const HEALS := {
+const HEALS = {
 	"bandage": {"name": "Bandagem",              "time": 4.0, "add": 10.0, "cap": 75.0,  "boost": 0.0},
 	"firstaid": {"name": "Kit de primeiros socorros", "time": 6.0, "add": 75.0, "cap": 75.0, "boost": 0.0},
 	"medkit":  {"name": "Kit médico",            "time": 8.0, "add": 100.0, "cap": 100.0, "boost": 0.0},
 	"drink":   {"name": "Energético",            "time": 4.0, "add": 0.0, "cap": 0.0, "boost": 40.0},
 	"pills":   {"name": "Analgésico",            "time": 6.0, "add": 0.0, "cap": 0.0, "boost": 60.0},
 }
-const ARMOR_RED := [0.0, 0.30, 0.40, 0.55]
-const HELMET_RED := [0.0, 0.30, 0.40, 0.55]
-const ATTACH := {"scope2": "Mira 2x", "scope4": "Mira 4x", "scope8": "Mira 8x", "extmag": "Carregador estendido", "comp": "Compensador"}
+const ARMOR_RED = [0.0, 0.30, 0.40, 0.55]
+const HELMET_RED = [0.0, 0.30, 0.40, 0.55]
+const ATTACH = {"scope2": "Mira 2x", "scope4": "Mira 4x", "scope8": "Mira 8x", "extmag": "Carregador estendido", "comp": "Compensador"}
 
 # tabela de loot comum (peso)
-const LOOT_TABLE := [
+const LOOT_TABLE = [
 	["p9", 9], ["vespa", 8], ["ar7", 7], ["m12", 5], ["t12", 6], ["lince", 3], ["falcao", 2],
 	["ammo:9mm", 9], ["ammo:556", 10], ["ammo:762", 9], ["ammo:12g", 5],
 	["bandage", 10], ["firstaid", 5], ["medkit", 1], ["drink", 5], ["pills", 3],
@@ -52,12 +52,12 @@ const LOOT_TABLE := [
 	["pack1", 4], ["pack2", 2], ["pack3", 1], ["scope2", 3], ["scope4", 2], ["scope8", 1], ["extmag", 3], ["comp", 3],
 ]
 
-const BOT_NAMES := ["Lobo", "Faísca", "Tornado", "Sombra", "Raposa", "Trovão", "Gavião", "Pantera", "Cobra", "Fantasma", "Titã", "Vulcão", "Coruja", "Neblina", "Orca", "Jaguar", "Falcão", "Ciclone", "Granito", "Pirata", "Cometa", "Escorpião", "Lince", "Tubarão", "Bisão", "Corvo", "Ninja", "Vândalo", "Atlas", "Bala", "Turbo", "Rocha", "Zebra", "Mamba", "Fênix", "Dragão", "Urso", "Cacto", "Radar", "Sabre", "Tigre", "Nômade", "Relâmpago", "Vento", "Âncora", "Ferro", "Sílex", "Garra", "Brasa", "Cobalto"]
+const BOT_NAMES = ["Lobo", "Faísca", "Tornado", "Sombra", "Raposa", "Trovão", "Gavião", "Pantera", "Cobra", "Fantasma", "Titã", "Vulcão", "Coruja", "Neblina", "Orca", "Jaguar", "Falcão", "Ciclone", "Granito", "Pirata", "Cometa", "Escorpião", "Lince", "Tubarão", "Bisão", "Corvo", "Ninja", "Vândalo", "Atlas", "Bala", "Turbo", "Rocha", "Zebra", "Mamba", "Fênix", "Dragão", "Urso", "Cacto", "Radar", "Sabre", "Tigre", "Nômade", "Relâmpago", "Vento", "Âncora", "Ferro", "Sílex", "Garra", "Brasa", "Cobalto"]
 
 # ---------------------------------------------------------------- configurações
-var settings := {"tier": -1, "sens": 1.0, "volume": 0.7, "fov": 80.0, "bots": 39, "name": "", "show_fps": true, "dyn_res": true, "ip": "127.0.0.1"}
-var hw := {}
-var rng := RandomNumberGenerator.new()
+var settings = {"tier": -1, "sens": 1.0, "volume": 0.7, "fov": 80.0, "bots": 39, "name": "", "show_fps": true, "dyn_res": true, "ip": "127.0.0.1"}
+var hw = {}
+var rng = RandomNumberGenerator.new()
 
 func _ready() -> void:
 	rng.randomize()
@@ -76,7 +76,7 @@ func item_name(t: String) -> String:
 	return t
 
 func roll_loot(r: RandomNumberGenerator) -> String:
-	var total := 0
+	var total = 0
 	for e in LOOT_TABLE: total += int(e[1])
 	var x = r.randi_range(1, total)
 	for e in LOOT_TABLE:
@@ -105,12 +105,12 @@ func _setup_input() -> void:
 		InputMap.action_add_event(pair[0], mb)
 
 func _load_settings() -> void:
-	var cf := ConfigFile.new()
+	var cf = ConfigFile.new()
 	if cf.load("user://settings.cfg") == OK:
 		for k in settings.keys(): settings[k] = cf.get_value("s", k, settings[k])
 
 func save_settings() -> void:
-	var cf := ConfigFile.new()
+	var cf = ConfigFile.new()
 	for k in settings.keys(): cf.set_value("s", k, settings[k])
 	cf.save("user://settings.cfg")
 

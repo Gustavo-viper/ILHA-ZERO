@@ -1,10 +1,10 @@
 extends Node3D
 ## Menu, sala de espera (LAN), início da partida e controles do jogador local.
 
-const WorldScript := preload("res://scripts/world.gd")
-const MatchScript := preload("res://scripts/match.gd")
-const HudScript := preload("res://scripts/hud.gd")
-const QualityScript := preload("res://scripts/quality.gd")
+const WorldScript = preload("res://scripts/world.gd")
+const MatchScript = preload("res://scripts/match.gd")
+const HudScript = preload("res://scripts/hud.gd")
+const QualityScript = preload("res://scripts/quality.gd")
 
 var menu: CanvasLayer
 var status_lbl: Label
@@ -15,19 +15,19 @@ var lobby_lbl: Label
 var start_btn: Button
 var settings_panel: PanelContainer
 var pause_panel: PanelContainer
-var players := {}          # peer_id -> nome
+var players = {}          # peer_id -> nome
 var world
 var match_node
 var hud
 var quality
-var in_game := false
+var in_game = false
 
 func _ready() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	_build_menu()
 
 # ---------------------------------------------------------------- menu
-func _btn(parent: Control, text: String, cb: Callable, primary := false) -> Button:
+func _btn(parent: Control, text: String, cb: Callable, primary = false) -> Button:
 	var b = Button.new(); b.text = text; b.custom_minimum_size = Vector2(0, 46)
 	b.add_theme_font_size_override("font_size", 18)
 	if primary:
@@ -83,9 +83,9 @@ func _build_settings() -> void:
 	var v = VBoxContainer.new(); v.add_theme_constant_override("separation", 8); settings_panel.add_child(v)
 	var t = Label.new(); t.text = "Gráficos e controles"; t.add_theme_font_size_override("font_size", 26); v.add_child(t)
 	var row = func(label: String, ctrl: Control) -> void:
-		var h = HBoxContainer.new(); var l := Label.new(); l.text = label; l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l)
+		var h = HBoxContainer.new(); var l = Label.new(); l.text = label; l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l)
 		ctrl.custom_minimum_size.x = 240; h.add_child(ctrl); v.add_child(h)
-	var q := OptionButton.new()
+	var q = OptionButton.new()
 	q.add_item("Automático — " + Game.tier_name(Game.hw.tier), 0)
 	for i in 6: q.add_item(Game.tier_name(i), i + 1)
 	q.selected = int(Game.settings["tier"]) + 1
@@ -171,7 +171,7 @@ func _play_offline() -> void:
 	_begin(Game.rng.randi(), [[1, _my_name()]], int(Game.settings["bots"]))
 
 func _host() -> void:
-	var peer := ENetMultiplayerPeer.new()
+	var peer = ENetMultiplayerPeer.new()
 	var err = peer.create_server(Game.PORT, 16)
 	if err != OK:
 		status_lbl.text = "Não foi possível criar o servidor (porta %d em uso?)" % Game.PORT
@@ -180,14 +180,14 @@ func _host() -> void:
 	players = {1: _my_name()}
 	multiplayer.peer_disconnected.connect(_on_peer_left)
 	lobby_panel.visible = true; start_btn.visible = true
-	var ips := []
+	var ips = []
 	for ip in IP.get_local_addresses():
 		if ip.count(".") == 3 and not ip.begins_with("127.") and not ip.begins_with("169.254"): ips.append(ip)
 	status_lbl.text = "Partida criada. Seus amigos na mesma rede entram com o IP: " + ", ".join(ips)
 	_refresh_lobby()
 
 func _join() -> void:
-	var peer := ENetMultiplayerPeer.new()
+	var peer = ENetMultiplayerPeer.new()
 	Game.settings["ip"] = ip_edit.text.strip_edges(); Game.save_settings()
 	var err = peer.create_client(ip_edit.text.strip_edges(), Game.PORT)
 	if err != OK:
@@ -207,7 +207,7 @@ func rpc_hello(n: String) -> void:
 	rpc_lobby.rpc(_players_array())
 
 func _players_array() -> Array:
-	var arr := []
+	var arr = []
 	var ids = players.keys(); ids.sort()
 	for id in ids: arr.append([id, players[id]])
 	return arr
@@ -219,7 +219,7 @@ func rpc_lobby(arr: Array) -> void:
 	_refresh_lobby()
 
 func _refresh_lobby() -> void:
-	var names := []
+	var names = []
 	for id in players: names.append("• " + String(players[id]) + (" (host)" if int(id) == 1 else ""))
 	lobby_lbl.text = "Jogadores (%d):\n%s\n\nAs vagas restantes viram bots." % [players.size(), "\n".join(names)]
 
@@ -294,7 +294,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	var me: Soldier = match_node.local
 	if me == null: return
 	if e is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var k := 0.0022 * float(Game.settings["sens"])
+		var k = 0.0022 * float(Game.settings["sens"])
 		if me.aiming: k *= 0.7 / maxf(1.0, me.scope_zoom() * 0.6)
 		var free = me.freelook or me.state == "plane" or not me.alive
 		if free:

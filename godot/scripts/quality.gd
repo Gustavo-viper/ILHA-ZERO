@@ -2,7 +2,7 @@ extends Node
 ## Níveis gráficos + ajuste automático pelo FPS (resolução dinâmica e troca de nível).
 
 # view = distância de visão; grass = [raio do capim, densidade]; veg = fração de árvores
-const TIERS := [
+const TIERS = [
 	{"scale": 0.55, "min": 0.4, "max": 0.65, "shadows": 0, "shadow_dist": 0.0, "view": 380.0, "grass": [0.0, 0.0], "veg": 0.35, "ssao": false, "ssil": false, "ssr": false, "sdfgi": false, "glow": false, "volfog": false, "msaa": 0, "taa": false, "target": 30.0},
 	{"scale": 0.75, "min": 0.5, "max": 0.85, "shadows": 1, "shadow_dist": 60.0, "view": 600.0, "grass": [22.0, 0.45], "veg": 0.55, "ssao": false, "ssil": false, "ssr": false, "sdfgi": false, "glow": false, "volfog": false, "msaa": 0, "taa": false, "target": 40.0},
 	{"scale": 0.9, "min": 0.6, "max": 1.0, "shadows": 2, "shadow_dist": 120.0, "view": 1000.0, "grass": [36.0, 0.7], "veg": 0.8, "ssao": true, "ssil": false, "ssr": false, "sdfgi": false, "glow": true, "volfog": false, "msaa": 0, "taa": false, "target": 55.0},
@@ -14,18 +14,18 @@ const TIERS := [
 var env: Environment
 var sun: DirectionalLight3D
 var world
-var tier := 1
-var scale := 1.0
-var auto := true
-var dyn_res := true
-var fps := 60.0
-var _acc := 0.0
-var _frames := 0
-var _low := 0
-var _high := 0
-var _grace := 3
-var failed_up := {}
-var compat := false
+var tier = 1
+var scale = 1.0
+var auto = true
+var dyn_res = true
+var fps = 60.0
+var _acc = 0.0
+var _frames = 0
+var _low = 0
+var _high = 0
+var _grace = 3
+var failed_up = {}
+var compat = false
 
 signal tier_changed(t: int, reason: String)
 

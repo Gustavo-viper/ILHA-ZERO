@@ -1,29 +1,29 @@
 extends Node3D
 ## Mundo procedural determinístico (mesma semente = mesma ilha em todos os jogadores da partida).
 
-const TOWN_NAMES := ["Porto Alto", "Vila Serena", "Pedra Negra", "Campo Verde", "Farol Sul", "Usina Velha", "Mirante", "Baía Azul", "Colina Seca", "Vale Fundo"]
-const SECTORS := 6
+const TOWN_NAMES = ["Porto Alto", "Vila Serena", "Pedra Negra", "Campo Verde", "Farol Sul", "Usina Velha", "Mirante", "Baía Azul", "Colina Seca", "Vale Fundo"]
+const SECTORS = 6
 
-var seed_value := 1
-var h := PackedFloat32Array()       # alturas na grade (GRID_N x GRID_N)
-var grass_mask := PackedByteArray() # 0 = sem capim
+var seed_value = 1
+var h = PackedFloat32Array()       # alturas na grade (GRID_N x GRID_N)
+var grass_mask = PackedByteArray() # 0 = sem capim
 var towns: Array = []               # {pos: Vector2, y, r, name}
 var houses: Array = []              # {x,z,w,d,y,floors,top}
 var loot_spots: Array = []          # Vector3
-var noise := FastNoiseLite.new()
-var noise2 := FastNoiseLite.new()
-var rng := RandomNumberGenerator.new()
+var noise = FastNoiseLite.new()
+var noise2 = FastNoiseLite.new()
+var rng = RandomNumberGenerator.new()
 
 var env: Environment
 var sun: DirectionalLight3D
-var mats := {}
+var mats = {}
 var tree_mms: Array = []            # [MultiMeshInstance3D, total]
 var grass_root: Node3D
-var grass_tiles := {}
-var grass_cfg := [0.0, 0.0]
+var grass_tiles = {}
+var grass_cfg = [0.0, 0.0]
 var grass_mesh: ArrayMesh
 var grass_mat: ShaderMaterial
-const GRASS_TILE := 16.0
+const GRASS_TILE = 16.0
 
 func generate(seed_in: int) -> void:
 	seed_value = seed_in
@@ -50,25 +50,25 @@ func _heights() -> void:
 		for i in N:
 			var x = i * Game.GRID - Game.HALF
 			var z = j * Game.GRID - Game.HALF
-			var d := Vector2(x, z).length() / Game.HALF + noise2.get_noise_2d(x, z) * 0.18
-			var mask := 1.0 - smoothstep(0.72, 1.0, d)
+			var d = Vector2(x, z).length() / Game.HALF + noise2.get_noise_2d(x, z) * 0.18
+			var mask = 1.0 - smoothstep(0.72, 1.0, d)
 			var n = noise.get_noise_2d(x, z) * 0.5 + 0.5
-			var ridge := 1.0 - absf(noise2.get_noise_2d(x * 0.5 + 900.0, z * 0.5 - 400.0))
+			var ridge = 1.0 - absf(noise2.get_noise_2d(x * 0.5 + 900.0, z * 0.5 - 400.0))
 			h[j * N + i] = pow(n, 1.6) * 60.0 * mask + ridge * ridge * 20.0 * mask + (mask * 14.0 - 9.0)
 
 func height_at(x: float, z: float) -> float:
 	var N = Game.GRID_N
 	var fx = clampf((x + Game.HALF) / Game.GRID, 0.0, N - 1.001)
 	var fz = clampf((z + Game.HALF) / Game.GRID, 0.0, N - 1.001)
-	var i = int(fx); var j := int(fz)
-	var u = fx - i; var v := fz - j
-	var a = h[j * N + i]; var b := h[j * N + i + 1]; var c := h[(j + 1) * N + i]; var d := h[(j + 1) * N + i + 1]
+	var i = int(fx); var j = int(fz)
+	var u = fx - i; var v = fz - j
+	var a = h[j * N + i]; var b = h[j * N + i + 1]; var c = h[(j + 1) * N + i]; var d = h[(j + 1) * N + i + 1]
 	return lerpf(lerpf(a, b, u), lerpf(c, d, u), v)
 
 func slope_at(x: float, z: float) -> float:
 	return absf(height_at(x + 3, z) - height_at(x - 3, z)) / 6.0 + absf(height_at(x, z + 3) - height_at(x, z - 3)) / 6.0
 
-func random_land_point(r: RandomNumberGenerator, inner := 0.7) -> Vector3:
+func random_land_point(r: RandomNumberGenerator, inner = 0.7) -> Vector3:
 	for k in 200:
 		var x = r.randf_range(-1, 1) * Game.HALF * inner
 		var z = r.randf_range(-1, 1) * Game.HALF * inner
@@ -79,22 +79,22 @@ func random_land_point(r: RandomNumberGenerator, inner := 0.7) -> Vector3:
 func _flatten(c: Vector2, r: float, y: float) -> void:
 	var N = Game.GRID_N
 	var R = r + 40.0
-	var i0 = maxi(0, int((c.x - R + Game.HALF) / Game.GRID)); var i1 := mini(N - 1, int((c.x + R + Game.HALF) / Game.GRID) + 1)
-	var j0 = maxi(0, int((c.y - R + Game.HALF) / Game.GRID)); var j1 := mini(N - 1, int((c.y + R + Game.HALF) / Game.GRID) + 1)
+	var i0 = maxi(0, int((c.x - R + Game.HALF) / Game.GRID)); var i1 = mini(N - 1, int((c.x + R + Game.HALF) / Game.GRID) + 1)
+	var j0 = maxi(0, int((c.y - R + Game.HALF) / Game.GRID)); var j1 = mini(N - 1, int((c.y + R + Game.HALF) / Game.GRID) + 1)
 	for j in range(j0, j1 + 1):
 		for i in range(i0, i1 + 1):
-			var p := Vector2(i * Game.GRID - Game.HALF, j * Game.GRID - Game.HALF)
-			var w := 1.0 - smoothstep(r, R, p.distance_to(c))
+			var p = Vector2(i * Game.GRID - Game.HALF, j * Game.GRID - Game.HALF)
+			var w = 1.0 - smoothstep(r, R, p.distance_to(c))
 			h[j * N + i] = lerpf(h[j * N + i], y, w)
 
 func _towns() -> void:
-	var tries := 0
+	var tries = 0
 	while towns.size() < 8 and tries < 600:
 		tries += 1
-		var p := Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * Game.HALF * 0.66
+		var p = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * Game.HALF * 0.66
 		var y = height_at(p.x, p.y)
 		if y < 3.0 or y > 42.0: continue
-		var ok := true
+		var ok = true
 		for t in towns:
 			if t.pos.distance_to(p) < 280.0: ok = false
 		if not ok: continue
@@ -108,14 +108,14 @@ func near_town(x: float, z: float, pad: float) -> bool:
 	return false
 
 # ---------------------------------------------------------------- materiais
-func _noise_tex(freq: float, seed_n: int, size := 512) -> NoiseTexture2D:
-	var nt := NoiseTexture2D.new()
+func _noise_tex(freq: float, seed_n: int, size = 512) -> NoiseTexture2D:
+	var nt = NoiseTexture2D.new()
 	var fn = FastNoiseLite.new(); fn.seed = seed_n; fn.frequency = freq; fn.fractal_octaves = 5
 	nt.noise = fn; nt.seamless = true; nt.width = size; nt.height = size; nt.generate_mipmaps = true
 	return nt
 
-func _mat(color: Color, tex: Texture2D, triplanar_scale: Vector3, rough := 0.9, metal := 0.0) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
+func _mat(color: Color, tex: Texture2D, triplanar_scale: Vector3, rough = 0.9, metal = 0.0) -> StandardMaterial3D:
+	var m = StandardMaterial3D.new()
 	m.albedo_color = color
 	m.vertex_color_use_as_albedo = true
 	if tex:
@@ -150,7 +150,7 @@ func _make_materials() -> void:
 func _environment() -> void:
 	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
+	var sky = Sky.new()
 	var sm = ShaderMaterial.new(); sm.shader = load("res://shaders/sky.gdshader")
 	sky.sky_material = sm
 	sky.radiance_size = Sky.RADIANCE_SIZE_256
@@ -186,7 +186,7 @@ func _environment() -> void:
 # ---------------------------------------------------------------- terreno (malha em blocos + colisão)
 func _splat_at(x: float, z: float, y: float) -> Color:
 	var sl = slope_at(x, z)
-	var sand := 1.0 if y < 2.4 else clampf(3.4 - y, 0.0, 1.0)
+	var sand = 1.0 if y < 2.4 else clampf(3.4 - y, 0.0, 1.0)
 	var rock = clampf((sl - 0.42) * 3.0, 0.0, 1.0) + (clampf((y - 60.0) / 8.0, 0.0, 1.0))
 	var nz = noise2.get_noise_2d(x * 6.0, z * 6.0) * 0.5 + 0.5
 	var dirt = clampf((nz - 0.66) * 3.0, 0.0, 1.0)
@@ -202,20 +202,20 @@ func _terrain_mesh() -> void:
 	var per = int(ceil(float(cells) / SECTORS))
 	for sj in SECTORS:
 		for si in SECTORS:
-			var i0 = si * per; var j0 := sj * per
-			var i1 = mini(cells, i0 + per); var j1 := mini(cells, j0 + per)
-			var w = i1 - i0 + 1; var d := j1 - j0 + 1
-			var verts := PackedVector3Array(); var norms := PackedVector3Array(); var cols := PackedColorArray(); var idx := PackedInt32Array()
+			var i0 = si * per; var j0 = sj * per
+			var i1 = mini(cells, i0 + per); var j1 = mini(cells, j0 + per)
+			var w = i1 - i0 + 1; var d = j1 - j0 + 1
+			var verts = PackedVector3Array(); var norms = PackedVector3Array(); var cols = PackedColorArray(); var idx = PackedInt32Array()
 			verts.resize(w * d); norms.resize(w * d); cols.resize(w * d)
 			for j in d:
 				for i in w:
-					var gi = i0 + i; var gj := j0 + j
-					var x = gi * Game.GRID - Game.HALF; var z := gj * Game.GRID - Game.HALF
+					var gi = i0 + i; var gj = j0 + j
+					var x = gi * Game.GRID - Game.HALF; var z = gj * Game.GRID - Game.HALF
 					var y = h[gj * N + gi]
 					var k = j * w + i
 					verts[k] = Vector3(x, y, z)
-					var hl = h[gj * N + maxi(0, gi - 1)]; var hr := h[gj * N + mini(N - 1, gi + 1)]
-					var hd = h[maxi(0, gj - 1) * N + gi]; var hu := h[mini(N - 1, gj + 1) * N + gi]
+					var hl = h[gj * N + maxi(0, gi - 1)]; var hr = h[gj * N + mini(N - 1, gi + 1)]
+					var hd = h[maxi(0, gj - 1) * N + gi]; var hu = h[mini(N - 1, gj + 1) * N + gi]
 					norms[k] = Vector3(hl - hr, 2.0 * Game.GRID, hd - hu).normalized()
 					cols[k] = _splat_at(x, z, y)
 			for j in d - 1:
@@ -233,9 +233,9 @@ func _terrain_mesh() -> void:
 func _terrain_collision() -> void:
 	# HeightMapShape3D com escala uniforme (espaçamento = GRID, alturas divididas pela escala)
 	var N = Game.GRID_N
-	var shape := HeightMapShape3D.new()
+	var shape = HeightMapShape3D.new()
 	shape.map_width = N; shape.map_depth = N
-	var data := PackedFloat32Array(); data.resize(N * N)
+	var data = PackedFloat32Array(); data.resize(N * N)
 	for k in N * N: data[k] = h[k] / Game.GRID
 	shape.map_data = data
 	var body = StaticBody3D.new(); body.collision_layer = Game.L_WORLD; body.collision_mask = 0
@@ -254,7 +254,7 @@ func _water() -> void:
 # ---------------------------------------------------------------- construções
 # Cada cidade vira poucas malhas (uma por material) + um corpo estático com caixas de colisão.
 class Builder:
-	var st := {}
+	var st = {}
 	var body: StaticBody3D
 	func _init(b: StaticBody3D) -> void: body = b
 	func get_tool(m: String) -> SurfaceTool:
@@ -272,8 +272,8 @@ class Builder:
 		var s = get_tool(m)
 		for v in [a, b, cc]:
 			s.set_color(c); s.set_normal(n); s.set_uv(Vector2(0, 0)); s.add_vertex(v)
-	func box(m: String, a: Vector3, b: Vector3, c: Color, collide := true) -> void:
-		var x0 = minf(a.x, b.x); var x1 := maxf(a.x, b.x); var y0 := minf(a.y, b.y); var y1 := maxf(a.y, b.y); var z0 := minf(a.z, b.z); var z1 := maxf(a.z, b.z)
+	func box(m: String, a: Vector3, b: Vector3, c: Color, collide = true) -> void:
+		var x0 = minf(a.x, b.x); var x1 = maxf(a.x, b.x); var y0 = minf(a.y, b.y); var y1 = maxf(a.y, b.y); var z0 = minf(a.z, b.z); var z1 = maxf(a.z, b.z)
 		quad(m, [Vector3(x1, y0, z0), Vector3(x1, y1, z0), Vector3(x1, y1, z1), Vector3(x1, y0, z1)], Vector3.RIGHT, c)
 		quad(m, [Vector3(x0, y0, z1), Vector3(x0, y1, z1), Vector3(x0, y1, z0), Vector3(x0, y0, z0)], Vector3.LEFT, c)
 		quad(m, [Vector3(x0, y1, z0), Vector3(x0, y1, z1), Vector3(x1, y1, z1), Vector3(x1, y1, z0)], Vector3.UP, c)
@@ -281,7 +281,7 @@ class Builder:
 		quad(m, [Vector3(x1, y0, z1), Vector3(x1, y1, z1), Vector3(x0, y1, z1), Vector3(x0, y0, z1)], Vector3.BACK, c)
 		quad(m, [Vector3(x0, y0, z0), Vector3(x0, y1, z0), Vector3(x1, y1, z0), Vector3(x1, y0, z0)], Vector3.FORWARD, c)
 		if collide:
-			var cs = CollisionShape3D.new(); var bs := BoxShape3D.new()
+			var cs = CollisionShape3D.new(); var bs = BoxShape3D.new()
 			bs.size = Vector3(x1 - x0, y1 - y0, z1 - z0); cs.shape = bs
 			cs.position = Vector3((x0 + x1) * 0.5, (y0 + y1) * 0.5, (z0 + z1) * 0.5)
 			body.add_child(cs)
@@ -301,7 +301,7 @@ func _buildings() -> void:
 		var B = Builder.new(body)
 		var placed: Array = []
 		var count = rng.randi_range(10, 16)
-		var guard := 0
+		var guard = 0
 		while placed.size() < count and guard < 400:
 			guard += 1
 			var a = rng.randf() * TAU
@@ -311,7 +311,7 @@ func _buildings() -> void:
 			var big = rng.randf() < 0.18
 			var w = rng.randf_range(16, 22) if big else rng.randf_range(8, 13)
 			var d = rng.randf_range(12, 16) if big else rng.randf_range(7, 11)
-			var clash := false
+			var clash = false
 			for p in placed:
 				if absf(p.x - x) < (p.w + w) * 0.5 + 5.0 and absf(p.z - z) < (p.d + d) * 0.5 + 5.0: clash = true
 			if clash: continue
@@ -324,13 +324,13 @@ func _buildings() -> void:
 			var a2 = rng.randf() * TAU; var r2: float = t.r * rng.randf_range(0.5, 1.1)
 			var cx: float = t.pos.x + cos(a2) * r2; var cz: float = t.pos.y + sin(a2) * r2
 			var cy = height_at(cx, cz)
-			var clash2 := false
+			var clash2 = false
 			for p in placed:
 				if absf(p.x - cx) < p.w * 0.5 + 3.0 and absf(p.z - cz) < p.d * 0.5 + 3.0: clash2 = true
 			if clash2: continue
 			if rng.randf() < 0.5:
 				var rot = rng.randf() < 0.5
-				var sx := 2.4 if rot else 6.0; var sz := 6.0 if rot else 2.4
+				var sx = 2.4 if rot else 6.0; var sz = 6.0 if rot else 2.4
 				B.box("metal", Vector3(cx - sx / 2, cy - 0.3, cz - sz / 2), Vector3(cx + sx / 2, cy + 2.6, cz + sz / 2), [Color("#9a3b2a"), Color("#2d5f8f"), Color("#4a6b3a"), Color("#b08a2c")][rng.randi() % 4])
 			else:
 				B.box("wood", Vector3(cx - 0.7, cy - 0.2, cz - 0.7), Vector3(cx + 0.7, cy + 1.3, cz + 0.7), Color("#9a7a4a"))
@@ -338,14 +338,14 @@ func _buildings() -> void:
 		B.commit(node, mats)
 
 func _house(B: Builder, H: Dictionary) -> void:
-	var T := 0.3; var FH := 3.2; var DW := 1.6; var DH := 2.3
+	var T = 0.3; var FH = 3.2; var DW = 1.6; var DH = 2.3
 	var x0: float = H.x - H.w / 2.0; var x1: float = H.x + H.w / 2.0; var z0: float = H.z - H.d / 2.0; var z1: float = H.z + H.d / 2.0
 	var y0: float = H.y
 	var top: float = y0 + 0.2 + FH * H.floors
 	H["top"] = top
 	var wm = "wood" if H.wood else "plaster"
 	var wc: Color = H.col if H.wood else H.pcol
-	var trim := Color("#e6e0d0")
+	var trim = Color("#e6e0d0")
 	B.box("plaster", Vector3(x0 - 0.06, y0 - 2.0, z0 - 0.06), Vector3(x1 + 0.06, y0 + 0.2, z1 + 0.06), Color("#8f8a80"))   # base/piso
 	B.box("wood", Vector3(x0 + T, y0 + 0.19, z0 + T), Vector3(x1 - T, y0 + 0.21, z1 - T), Color("#8a6a48"), false)          # assoalho
 	for side in 4:
@@ -368,7 +368,7 @@ func _house(B: Builder, H: Dictionary) -> void:
 				mk.call(mid + DW / 2, mid + DW / 2 + 0.1, fy, fy + DH + 0.1, "wood", trim, false)
 			else:
 				# janela no meio da parede (dá pra atirar de dentro)
-				var ww := 1.4; var wy0 := fy + 1.0; var wy1 := fy + 2.2
+				var ww = 1.4; var wy0 = fy + 1.0; var wy1 = fy + 2.2
 				mk.call(a0, mid - ww / 2, fy, fy1, wm, wc, true)
 				mk.call(mid + ww / 2, a1, fy, fy1, wm, wc, true)
 				mk.call(mid - ww / 2, mid + ww / 2, fy, wy0, wm, wc, true)
@@ -378,17 +378,17 @@ func _house(B: Builder, H: Dictionary) -> void:
 	# 2º andar com escada
 	if H.floors == 2:
 		var fy2 = y0 + 0.2 + FH
-		var sw := 1.4; var sx0 := x1 - T - sw; var slen: float = minf(H.d - 1.2, 6.5)
+		var sw = 1.4; var sx0 = x1 - T - sw; var slen: float = minf(H.d - 1.2, 6.5)
 		B.box("wood", Vector3(x0 + T, fy2 - 0.25, z0 + T), Vector3(sx0, fy2, z1 - T), Color("#8a6a48"))
 		B.box("wood", Vector3(sx0, fy2 - 0.25, z0 + slen + 0.2), Vector3(x1 - T, fy2, z1 - T), Color("#8a6a48"))
-		var steps := 12
+		var steps = 12
 		for s in steps:
 			var sz = z0 + T + (slen - T) * (float(s) / steps)
 			B.box("wood", Vector3(sx0, y0 + 0.2, sz), Vector3(x1 - T, y0 + 0.2 + FH * float(s + 1) / steps, sz + (slen - T) / steps), Color("#7a5a3a"))
 		loot_spots.append(Vector3(x0 + 1.5 + rng.randf() * (H.w - 4.5), fy2 + 0.05, z0 + 1.5 + rng.randf() * (H.d - 3.0)))
 	# laje + telhado de duas águas (visual) com beiral
 	B.box("plaster", Vector3(x0 - 0.2, top, z0 - 0.2), Vector3(x1 + 0.2, top + 0.25, z1 + 0.2), Color("#4a4038"))
-	var ov := 0.45; var t2 := top + 0.25
+	var ov = 0.45; var t2 = top + 0.25
 	var along_x: bool = H.w >= H.d
 	var half: float = (H.d if along_x else H.w) / 2.0 + ov
 	var rise = half * 0.55
@@ -397,7 +397,7 @@ func _house(B: Builder, H: Dictionary) -> void:
 	var c: float = H.z if along_x else H.x
 	var P = func(l: float, s: float, yy: float) -> Vector3: return Vector3(l, yy, c + s) if along_x else Vector3(c + s, yy, l)
 	var rm = "roof_metal" if H.metal_roof else "roof_tile"
-	var rc := Color("#b8b4ac") if H.metal_roof else Color("#a5553a")
+	var rc = Color("#b8b4ac") if H.metal_roof else Color("#a5553a")
 	for sgn in [-1.0, 1.0]:
 		var a: Vector3 = P.call(L0, sgn * half, t2); var b: Vector3 = P.call(L1, sgn * half, t2)
 		var cc: Vector3 = P.call(L1, 0.0, t2 + rise); var dd: Vector3 = P.call(L0, 0.0, t2 + rise)
@@ -419,7 +419,7 @@ func _props() -> void:
 
 # ---------------------------------------------------------------- vegetação
 func _merge(parts: Array) -> Array:
-	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array(); var idx := PackedInt32Array()
+	var verts = PackedVector3Array(); var norms = PackedVector3Array(); var uvs = PackedVector2Array(); var idx = PackedInt32Array()
 	for p in parts:
 		var a: Array = (p[0] as PrimitiveMesh).get_mesh_arrays()
 		var tr: Transform3D = p[1]
@@ -432,29 +432,29 @@ func _merge(parts: Array) -> Array:
 	arr[Mesh.ARRAY_VERTEX] = verts; arr[Mesh.ARRAY_NORMAL] = norms; arr[Mesh.ARRAY_TEX_UV] = uvs; arr[Mesh.ARRAY_INDEX] = idx
 	return arr
 
-func _cyl(r_top: float, r_bot: float, hgt: float, seg := 8) -> CylinderMesh:
+func _cyl(r_top: float, r_bot: float, hgt: float, seg = 8) -> CylinderMesh:
 	var c = CylinderMesh.new(); c.top_radius = r_top; c.bottom_radius = r_bot; c.height = hgt; c.radial_segments = seg; c.rings = 1
 	return c
 
 func _tree_meshes() -> Array:
 	var trunk = _merge([[_cyl(0.13, 0.3, 4.4, 7), Transform3D(Basis(), Vector3(0, 2.2, 0))]])
-	var pine_parts := []
+	var pine_parts = []
 	for k in 5:
 		pine_parts.append([_cyl(0.0, 2.3 - k * 0.38, 2.6 - k * 0.2, 9), Transform3D(Basis(Vector3.UP, k * 0.7), Vector3(0, 3.0 + k * 1.15, 0))])
-	var leaf_parts := []
+	var leaf_parts = []
 	for b in [[0, 5.0, 0, 2.2], [1.2, 4.3, 0.5, 1.6], [-1.1, 4.5, -0.4, 1.7], [0.2, 6.0, -0.8, 1.5], [-0.4, 5.5, 1.1, 1.5]]:
 		var s = SphereMesh.new(); s.radius = b[3]; s.height = b[3] * 1.7; s.radial_segments = 10; s.rings = 6
 		leaf_parts.append([s, Transform3D(Basis(), Vector3(b[0], b[1], b[2]))])
-	var pine := ArrayMesh.new()
+	var pine = ArrayMesh.new()
 	pine.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, trunk); pine.surface_set_material(0, mats["bark"])
 	pine.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _merge(pine_parts)); pine.surface_set_material(1, mats["pine"])
-	var leaf := ArrayMesh.new()
+	var leaf = ArrayMesh.new()
 	leaf.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, trunk); leaf.surface_set_material(0, mats["bark"])
 	leaf.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _merge(leaf_parts)); leaf.surface_set_material(1, mats["foliage"])
-	var rockm := ArrayMesh.new()
+	var rockm = ArrayMesh.new()
 	var rs = SphereMesh.new(); rs.radius = 1.0; rs.height = 1.3; rs.radial_segments = 7; rs.rings = 4
 	rockm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _merge([[rs, Transform3D()]])); rockm.surface_set_material(0, mats["rock"])
-	var bushm := ArrayMesh.new()
+	var bushm = ArrayMesh.new()
 	var bs = SphereMesh.new(); bs.radius = 0.8; bs.height = 1.2; bs.radial_segments = 8; bs.rings = 5
 	bushm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _merge([[bs, Transform3D(Basis(), Vector3(0, 0.4, 0))]])); bushm.surface_set_material(0, mats["bush"])
 	return [pine, leaf, rockm, bushm]
@@ -473,28 +473,28 @@ func _vegetation() -> void:
 			var sk = "%d,%d" % [si, sj]
 			if not colliders.has(sk):
 				var b = StaticBody3D.new(); b.collision_layer = Game.L_WORLD; b.collision_mask = 0; add_child(b); colliders[sk] = b
-			var cs = CollisionShape3D.new(); var cy := CylinderShape3D.new(); cy.radius = col_r; cy.height = col_h
+			var cs = CollisionShape3D.new(); var cy = CylinderShape3D.new(); cy.radius = col_r; cy.height = col_h
 			cs.shape = cy; cs.position = tr.origin + Vector3(0, col_h * 0.5, 0)
 			(colliders[sk] as StaticBody3D).add_child(cs)
-	var count := 0
+	var count = 0
 	for i in 9000:
 		if count >= 2600: break
-		var x = rng.randf_range(-1, 1) * Game.HALF; var z := rng.randf_range(-1, 1) * Game.HALF
+		var x = rng.randf_range(-1, 1) * Game.HALF; var z = rng.randf_range(-1, 1) * Game.HALF
 		var y = height_at(x, z)
 		if y < 2.5 or y > 64.0 or near_town(x, z, 8.0): continue
 		if noise2.get_noise_2d(x * 3.0, z * 3.0) < -0.05 and rng.randf() < 0.85: continue
 		var s = rng.randf_range(0.8, 1.5)
-		var kind := 0 if (y > 32.0 or rng.randf() < 0.55) else 1
+		var kind = 0 if (y > 32.0 or rng.randf() < 0.55) else 1
 		add.call(kind, Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.95, 1.2), s)), Vector3(x, y - 0.2, z)), 0.35 * s, 7.0 * s)
 		count += 1
 	for i in 900:
-		var x = rng.randf_range(-1, 1) * Game.HALF; var z := rng.randf_range(-1, 1) * Game.HALF
+		var x = rng.randf_range(-1, 1) * Game.HALF; var z = rng.randf_range(-1, 1) * Game.HALF
 		var y = height_at(x, z)
 		if y < 0.5 or near_town(x, z, 6.0): continue
-		var s := 0.6 + pow(rng.randf(), 2.0) * 2.6
+		var s = 0.6 + pow(rng.randf(), 2.0) * 2.6
 		add.call(2, Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * 0.8, s * rng.randf_range(0.7, 1.2))), Vector3(x, y - s * 0.25, z)), s * 0.85, s * 1.2)
 	for i in 7000:
-		var x = rng.randf_range(-1, 1) * Game.HALF; var z := rng.randf_range(-1, 1) * Game.HALF
+		var x = rng.randf_range(-1, 1) * Game.HALF; var z = rng.randf_range(-1, 1) * Game.HALF
 		var y = height_at(x, z)
 		if y < 2.0 or y > 50.0 or near_town(x, z, 2.0): continue
 		var s = rng.randf_range(0.5, 1.3)
@@ -521,10 +521,10 @@ func _grass_setup() -> void:
 	grass_mask.resize(N * N)
 	for j in N:
 		for i in N:
-			var x = i * Game.GRID - Game.HALF; var z := j * Game.GRID - Game.HALF
+			var x = i * Game.GRID - Game.HALF; var z = j * Game.GRID - Game.HALF
 			var y = h[j * N + i]
 			var ok = y > 3.0 and y < 56.0 and slope_at(x, z) < 0.45
-			var dens := 1.0
+			var dens = 1.0
 			if ok:
 				if noise2.get_noise_2d(x * 6.0, z * 6.0) * 0.5 + 0.5 > 0.7: dens = 0.25
 				for t in towns:
@@ -532,15 +532,15 @@ func _grass_setup() -> void:
 					if dd < t.r: dens *= 0.3 + 0.7 * dd / t.r
 			grass_mask[j * N + i] = int(dens * 255.0) if ok else 0
 	for H in houses:
-		var i0 = int((H.x - H.w / 2.0 - 1.5 + Game.HALF) / Game.GRID); var i1 := int((H.x + H.w / 2.0 + 1.5 + Game.HALF) / Game.GRID) + 1
-		var j0 = int((H.z - H.d / 2.0 - 1.5 + Game.HALF) / Game.GRID); var j1 := int((H.z + H.d / 2.0 + 1.5 + Game.HALF) / Game.GRID) + 1
+		var i0 = int((H.x - H.w / 2.0 - 1.5 + Game.HALF) / Game.GRID); var i1 = int((H.x + H.w / 2.0 + 1.5 + Game.HALF) / Game.GRID) + 1
+		var j0 = int((H.z - H.d / 2.0 - 1.5 + Game.HALF) / Game.GRID); var j1 = int((H.z + H.d / 2.0 + 1.5 + Game.HALF) / Game.GRID) + 1
 		for j in range(maxi(0, j0), mini(N, j1 + 1)):
 			for i in range(maxi(0, i0), mini(N, i1 + 1)): grass_mask[j * N + i] = 0
 	# tufo: 3 planos cruzados (UV.y = 1 na base)
 	var st = SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for k in 3:
 		var a = k * PI / 3.0
-		var dx := Vector3(cos(a), 0, sin(a)) * 0.55
+		var dx = Vector3(cos(a), 0, sin(a)) * 0.55
 		var p = [-dx, dx, dx + Vector3(0, 1, 0), -dx + Vector3(0, 1, 0)]
 		var uv = [Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)]
 		for idx in [0, 1, 2, 0, 2, 3]:
@@ -551,7 +551,7 @@ func _grass_setup() -> void:
 
 func grass_density(x: float, z: float) -> float:
 	var N = Game.GRID_N
-	var i = clampi(int(round((x + Game.HALF) / Game.GRID)), 0, N - 1); var j := clampi(int(round((z + Game.HALF) / Game.GRID)), 0, N - 1)
+	var i = clampi(int(round((x + Game.HALF) / Game.GRID)), 0, N - 1); var j = clampi(int(round((z + Game.HALF) / Game.GRID)), 0, N - 1)
 	return grass_mask[j * N + i] / 255.0
 
 func _make_grass_tile(ti: int, tj: int) -> MultiMeshInstance3D:
@@ -582,14 +582,14 @@ func update_grass(cam_pos: Vector3) -> void:
 			for k in grass_tiles: (grass_tiles[k] as Node).queue_free()
 			grass_tiles.clear()
 		return
-	var ci = int(floor(cam_pos.x / GRASS_TILE)); var cj := int(floor(cam_pos.z / GRASS_TILE))
+	var ci = int(floor(cam_pos.x / GRASS_TILE)); var cj = int(floor(cam_pos.z / GRASS_TILE))
 	var rt = int(ceil(R / GRASS_TILE))
-	var want := {}
-	var made := 0
+	var want = {}
+	var made = 0
 	for dj in range(-rt, rt + 1):
 		for di in range(-rt, rt + 1):
 			if Vector2(di, dj).length() * GRASS_TILE > R + GRASS_TILE: continue
-			var key := Vector2i(ci + di, cj + dj)
+			var key = Vector2i(ci + di, cj + dj)
 			want[key] = true
 			if not grass_tiles.has(key) and made < 6:   # no máximo 6 blocos novos por quadro (sem travadas)
 				var t = _make_grass_tile(key.x, key.y); grass_root.add_child(t); grass_tiles[key] = t; made += 1
@@ -610,11 +610,11 @@ func apply_quality(T: Dictionary, _tier: int) -> void:
 		mmi.visibility_range_end = float(T.view)
 
 # ---------------------------------------------------------------- mapa (imagem para o minimapa / mapa grande)
-func make_map_image(size := 512) -> ImageTexture:
+func make_map_image(size = 512) -> ImageTexture:
 	var img = Image.create(size, size, false, Image.FORMAT_RGB8)
 	for j in size:
 		for i in size:
-			var x = (float(i) / size) * Game.MAP_SIZE - Game.HALF; var z := (float(j) / size) * Game.MAP_SIZE - Game.HALF
+			var x = (float(i) / size) * Game.MAP_SIZE - Game.HALF; var z = (float(j) / size) * Game.MAP_SIZE - Game.HALF
 			var y = height_at(x, z)
 			var c: Color
 			if y < 0.0: c = Color(0.16, 0.40, 0.55).darkened(clampf(-y / 12.0, 0.0, 0.5))
@@ -623,6 +623,6 @@ func make_map_image(size := 512) -> ImageTexture:
 			var shade = (height_at(x - 4.0, z - 4.0) - y) * 0.05
 			img.set_pixel(i, j, c.lightened(clampf(shade, 0.0, 0.3)).darkened(clampf(-shade, 0.0, 0.3)))
 	for H in houses:
-		var r := Rect2i(int((H.x - H.w / 2.0 + Game.HALF) / Game.MAP_SIZE * size), int((H.z - H.d / 2.0 + Game.HALF) / Game.MAP_SIZE * size), maxi(1, int(H.w / Game.MAP_SIZE * size)), maxi(1, int(H.d / Game.MAP_SIZE * size)))
+		var r = Rect2i(int((H.x - H.w / 2.0 + Game.HALF) / Game.MAP_SIZE * size), int((H.z - H.d / 2.0 + Game.HALF) / Game.MAP_SIZE * size), maxi(1, int(H.w / Game.MAP_SIZE * size)), maxi(1, int(H.d / Game.MAP_SIZE * size)))
 		img.fill_rect(r, Color(0.35, 0.28, 0.22))
 	return ImageTexture.create_from_image(img)

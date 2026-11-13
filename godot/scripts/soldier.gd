@@ -2,56 +2,56 @@ extends CharacterBody3D
 class_name Soldier
 ## Soldado: jogador local, bot (IA, roda no host) ou "marionete" (outro jogador na rede).
 
-const SOLDIER_SCENE := "res://assets/characters/soldier.glb"
-const TINTS := [Color(1, 1, 1), Color(0.75, 0.82, 0.62), Color(0.88, 0.80, 0.64), Color(0.68, 0.74, 0.84), Color(0.6, 0.6, 0.56), Color(0.85, 0.7, 0.58)]
+const SOLDIER_SCENE = "res://assets/characters/soldier.glb"
+const TINTS = [Color(1, 1, 1), Color(0.75, 0.82, 0.62), Color(0.88, 0.80, 0.64), Color(0.68, 0.74, 0.84), Color(0.6, 0.6, 0.56), Color(0.85, 0.7, 0.58)]
 
 var match_ref
 var world
-var display_name := ""
-var is_bot := false
-var is_local := false
-var is_puppet := false
-var peer_id := 1
-var skill := 0.6
+var display_name = ""
+var is_bot = false
+var is_local = false
+var is_puppet = false
+var peer_id = 1
+var skill = 0.6
 
 # estado
-var hp := 100.0
-var boost := 0.0
-var alive := true
-var state := "lobby"          # lobby, plane, air, chute, ground, dead
-var stance := 0               # 0 em pé, 1 agachado, 2 deitado
-var lean := 0.0
-var yaw := 0.0
-var pitch := 0.0
-var aiming := false
-var sprinting := false
-var move_speed := 0.0
+var hp = 100.0
+var boost = 0.0
+var alive = true
+var state = "lobby"          # lobby, plane, air, chute, ground, dead
+var stance = 0               # 0 em pé, 1 agachado, 2 deitado
+var lean = 0.0
+var yaw = 0.0
+var pitch = 0.0
+var aiming = false
+var sprinting = false
+var move_speed = 0.0
 
 # inventário
 var weapons: Array = [null, null, null]   # {id, mag, scope, extmag, comp}
-var cur := -1
-var ammo := {"9mm": 0, "556": 0, "762": 0, "12g": 0, "300": 0}
-var heals := {"bandage": 0, "firstaid": 0, "medkit": 0, "drink": 0, "pills": 0}
-var spare := {}               # acessórios ainda não encaixados
-var vest := 0
-var helmet := 0
-var pack := 0
-var kills := 0
-var place := 0
+var cur = -1
+var ammo = {"9mm": 0, "556": 0, "762": 0, "12g": 0, "300": 0}
+var heals = {"bandage": 0, "firstaid": 0, "medkit": 0, "drink": 0, "pills": 0}
+var spare = {}               # acessórios ainda não encaixados
+var vest = 0
+var helmet = 0
+var pack = 0
+var kills = 0
+var place = 0
 
 # ações (recarregar / curar)
-var action := ""
-var action_t := 0.0
-var action_total := 0.0
-var fire_cd := 0.0
-var auto_fire := true
-var recoil := 0.0
+var action = ""
+var action_t = 0.0
+var action_total = 0.0
+var fire_cd = 0.0
+var auto_fire = true
+var recoil = 0.0
 
 # visual
 var model: Node3D
 var body_pivot: Node3D
 var anim: AnimationPlayer
-var anim_cur := ""
+var anim_cur = ""
 var hand: Node3D
 var gun: Node3D
 var chute: Node3D
@@ -65,19 +65,19 @@ var capsule: CollisionShape3D
 var cam_pivot: Node3D
 var spring: SpringArm3D
 var cam: Camera3D
-var first_person := false
-var freelook := false
-var look_yaw := 0.0
-var look_pitch := 0.0
+var first_person = false
+var freelook = false
+var look_yaw = 0.0
+var look_pitch = 0.0
 var spectate = null
 
 # rede (marionete)
-var net_pos := Vector3.ZERO
-var net_yaw := 0.0
-var net_pitch := 0.0
+var net_pos = Vector3.ZERO
+var net_yaw = 0.0
+var net_pitch = 0.0
 
 # IA
-var ai := {"target": null, "goal": null, "think": 0.0, "react": 0.0, "stuck": 0.0, "avoid": 0.0, "avoid_dir": 1.0, "strafe": 1.0, "strafe_t": 0.0, "jump_at": 0.5, "last_pos": Vector3.ZERO, "can_see": false}
+var ai = {"target": null, "goal": null, "think": 0.0, "react": 0.0, "stuck": 0.0, "avoid": 0.0, "avoid_dir": 1.0, "strafe": 1.0, "strafe_t": 0.0, "jump_at": 0.5, "last_pos": Vector3.ZERO, "can_see": false}
 
 func setup(m: Node, w: Node, name_in: String, bot: bool, local: bool, seed_tint: int) -> void:
 	match_ref = m; world = w; display_name = name_in; is_bot = bot; is_local = local; is_puppet = not bot and not local
@@ -97,9 +97,9 @@ func setup(m: Node, w: Node, name_in: String, bot: bool, local: bool, seed_tint:
 
 func _build_hitbox() -> void:
 	hitbox = Area3D.new(); hitbox.collision_layer = Game.L_HITBOX; hitbox.collision_mask = 0; hitbox.monitoring = false
-	shape_head = CollisionShape3D.new(); var sh := SphereShape3D.new(); sh.radius = 0.16; shape_head.shape = sh
-	shape_torso = CollisionShape3D.new(); var st := CapsuleShape3D.new(); st.radius = 0.24; st.height = 0.75; shape_torso.shape = st
-	shape_legs = CollisionShape3D.new(); var sl := CapsuleShape3D.new(); sl.radius = 0.2; sl.height = 0.9; shape_legs.shape = sl
+	shape_head = CollisionShape3D.new(); var sh = SphereShape3D.new(); sh.radius = 0.16; shape_head.shape = sh
+	shape_torso = CollisionShape3D.new(); var st = CapsuleShape3D.new(); st.radius = 0.24; st.height = 0.75; shape_torso.shape = st
+	shape_legs = CollisionShape3D.new(); var sl = CapsuleShape3D.new(); sl.radius = 0.2; sl.height = 0.9; shape_legs.shape = sl
 	hitbox.add_child(shape_head); hitbox.add_child(shape_torso); hitbox.add_child(shape_legs)   # índices 0,1,2
 	add_child(hitbox)
 	_update_hitbox()
@@ -109,7 +109,7 @@ func _update_hitbox() -> void:
 		shape_head.position = Vector3(0, 0.25, -0.75); shape_torso.position = Vector3(0, 0.22, 0); shape_torso.rotation = Vector3(PI / 2, 0, 0)
 		shape_legs.position = Vector3(0, 0.2, 0.75); shape_legs.rotation = Vector3(PI / 2, 0, 0)
 	else:
-		var k := 0.72 if stance == 1 else 1.0
+		var k = 0.72 if stance == 1 else 1.0
 		shape_head.position = Vector3(0, 1.62 * k, 0); shape_torso.position = Vector3(0, 1.15 * k, 0); shape_torso.rotation = Vector3.ZERO
 		shape_legs.position = Vector3(0, 0.48 * k, 0); shape_legs.rotation = Vector3.ZERO
 	var cap = capsule.shape as CapsuleShape3D
@@ -148,13 +148,13 @@ func _build_model(seed_tint: int) -> void:
 					break
 	else:
 		# reserva: boneco simples se o modelo não carregar
-		var mi2 = MeshInstance3D.new(); var cm := CapsuleMesh.new(); cm.radius = 0.3; cm.height = 1.8; mi2.mesh = cm; mi2.position.y = 0.9
+		var mi2 = MeshInstance3D.new(); var cm = CapsuleMesh.new(); cm.radius = 0.3; cm.height = 1.8; mi2.mesh = cm; mi2.position.y = 0.9
 		body_pivot.add_child(mi2)
 	gun = Node3D.new(); add_child(gun)
 	chute = _make_chute(); chute.visible = false; add_child(chute)
 
 func _make_chute() -> Node3D:
-	var n := Node3D.new()
+	var n = Node3D.new()
 	var sm = SphereMesh.new(); sm.radius = 3.4; sm.height = 2.6; sm.is_hemisphere = true; sm.radial_segments = 16; sm.rings = 6
 	var mat = StandardMaterial3D.new(); mat.albedo_color = Color(0.25, 0.38, 0.55); mat.cull_mode = BaseMaterial3D.CULL_DISABLED; mat.roughness = 0.8
 	var c = MeshInstance3D.new(); c.mesh = sm; c.material_override = mat; c.position.y = 4.4; c.scale = Vector3(1.25, 0.6, 0.9)
@@ -174,7 +174,7 @@ func set_weapon_visual() -> void:
 	if w == null: return
 	gun.add_child(WeaponModels.build(String(w.id), bool(w.get("scope", 1.0) > 1.0)))
 
-func _play(a: String, blend := 0.25) -> void:
+func _play(a: String, blend = 0.25) -> void:
 	if anim == null or anim_cur == a or not anim.has_animation(a): return
 	anim_cur = a; anim.play(a, blend)
 
@@ -201,7 +201,7 @@ func _update_camera(dt: float) -> void:
 		cam.fov = lerpf(cam.fov, float(Game.settings["fov"]), minf(1.0, dt * 8.0))
 		if model: model.visible = true
 		return
-	var eye_h := 1.6 if stance == 0 else (1.15 if stance == 1 else 0.45)
+	var eye_h = 1.6 if stance == 0 else (1.15 if stance == 1 else 0.45)
 	if state == "plane":
 		cam_pivot.global_position = global_position + Vector3(0, 6, 0)
 		spring.spring_length = 32.0; cam_pivot.rotation = Vector3(look_pitch, look_yaw, 0)
@@ -211,11 +211,11 @@ func _update_camera(dt: float) -> void:
 	var p = pitch if not freelook else look_pitch
 	var air = state == "air" or state == "chute"
 	var fp = (first_person or (aiming and scope > 1.0)) and not air and alive
-	var side := 0.0 if fp or air else 0.55 + lean * 0.4
-	var target_len := 0.0 if fp else (7.5 if air else (1.5 if aiming else 3.2))
+	var side = 0.0 if fp or air else 0.55 + lean * 0.4
+	var target_len = 0.0 if fp else (7.5 if air else (1.5 if aiming else 3.2))
 	spring.spring_length = lerpf(spring.spring_length, target_len, minf(1.0, dt * 12.0))
 	var base = global_position + Vector3(0, eye_h, 0)
-	var right := Vector3(cos(y), 0, -sin(y))
+	var right = Vector3(cos(y), 0, -sin(y))
 	cam_pivot.global_position = base + right * (side + lean * 0.35)
 	cam_pivot.rotation = Vector3(p, y, lean * -0.18)
 	var fov_base = float(Game.settings["fov"])
@@ -240,7 +240,7 @@ func scope_zoom() -> float:
 	if w == null: return 1.0
 	return float(w.get("scope", Game.WEAPONS[w.id].scope))
 
-func give(item: String, amount := -1) -> bool:
+func give(item: String, amount = -1) -> bool:
 	if Game.WEAPONS.has(item):
 		var d: Dictionary = Game.WEAPONS[item]
 		var w = {"id": item, "mag": amount if amount >= 0 else int(d.mag), "scope": float(d.scope), "extmag": false, "comp": false}
@@ -355,7 +355,7 @@ func fire(aim_point: Vector3) -> void:
 
 func muzzle_position() -> Vector3:
 	var fwd = -Basis(Vector3.UP, yaw).z
-	var h := 1.45 if stance == 0 else (1.0 if stance == 1 else 0.35)
+	var h = 1.45 if stance == 0 else (1.0 if stance == 1 else 0.35)
 	return global_position + Vector3(0, h, 0) + fwd * 0.6 + Basis(Vector3.UP, yaw).x * 0.18
 
 # ---------------------------------------------------------------- dano (só o host decide)
@@ -405,7 +405,7 @@ func _physics_process(dt: float) -> void:
 
 func wish_from_input() -> Vector3:
 	var iv = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var b := Basis(Vector3.UP, yaw)
+	var b = Basis(Vector3.UP, yaw)
 	return (b.x * iv.x + b.z * iv.y).normalized() if iv.length() > 0.05 else Vector3.ZERO
 
 func _local_step(dt: float) -> void:
@@ -423,7 +423,7 @@ func _local_step(dt: float) -> void:
 	_ground_move(dt, wish, sprinting)
 
 func _ground_move(dt: float, wish: Vector3, sprint: bool) -> void:
-	var speed := 4.7
+	var speed = 4.7
 	if stance == 1: speed = 2.6
 	elif stance == 2: speed = 1.1
 	if sprint and stance == 0: speed = 6.3
@@ -433,7 +433,7 @@ func _ground_move(dt: float, wish: Vector3, sprint: bool) -> void:
 	var swimming = global_position.y < Game.WATER_LEVEL - 1.0
 	if swimming: speed = 2.4
 	var target = wish * speed
-	var acc := 14.0 if is_on_floor() else 3.0
+	var acc = 14.0 if is_on_floor() else 3.0
 	velocity.x = lerpf(velocity.x, target.x, minf(1.0, dt * acc))
 	velocity.z = lerpf(velocity.z, target.z, minf(1.0, dt * acc))
 	if swimming:
@@ -448,18 +448,18 @@ func _ground_move(dt: float, wish: Vector3, sprint: bool) -> void:
 
 func _air_step(dt: float) -> void:
 	var wish = Vector3.ZERO
-	var dive := false
+	var dive = false
 	if is_local:
 		wish = wish_from_input(); dive = Input.is_action_pressed("move_forward")
 	elif is_bot and ai.goal != null:
 		var g: Vector3 = ai.goal
-		var to := Vector3(g.x - global_position.x, 0, g.z - global_position.z)
+		var to = Vector3(g.x - global_position.x, 0, g.z - global_position.z)
 		if to.length() > 3.0: wish = to.normalized()
 		yaw = atan2(-to.x, -to.z)
 		dive = state == "air"
 	var agl: float = global_position.y - world.height_at(global_position.x, global_position.z)
 	if state == "air" and agl < 140.0: open_chute()
-	var hs := 13.0 if state == "chute" else 24.0
+	var hs = 13.0 if state == "chute" else 24.0
 	var vs = (-7.0 if dive else -5.0) if state == "chute" else (-52.0 if dive else -40.0)
 	velocity.x = lerpf(velocity.x, wish.x * hs, minf(1.0, dt * 1.5))
 	velocity.z = lerpf(velocity.z, wish.z * hs, minf(1.0, dt * 1.5))
@@ -509,7 +509,7 @@ func _process(dt: float) -> void:
 		elif stance == 1:
 			body_pivot.scale = Vector3(1, 0.74, 1)
 		body_pivot.rotation.z = -lean * 0.25
-	var a := "Idle"
+	var a = "Idle"
 	if state == "ground" or state == "lobby":
 		if move_speed > 5.4: a = "Run"
 		elif move_speed > 0.5: a = "Walk"
@@ -534,12 +534,12 @@ func _bot_step(dt: float) -> void:
 		ai["think"] = Game.rng.randf_range(0.25, 0.4)
 		_bot_think()
 	var wish = Vector3.ZERO
-	var sprint := false
+	var sprint = false
 	aiming = false
 	var tgt = ai.target
 	if tgt != null and is_instance_valid(tgt) and tgt.alive and bool(ai.can_see):
 		var to: Vector3 = tgt.global_position - global_position
-		var flat := Vector3(to.x, 0, to.z)
+		var flat = Vector3(to.x, 0, to.z)
 		var dist = flat.length()
 		yaw = lerp_angle(yaw, atan2(-to.x, -to.z), minf(1.0, dt * 6.0))
 		pitch = atan2(to.y + 0.2, maxf(dist, 0.1))
@@ -550,14 +550,14 @@ func _bot_step(dt: float) -> void:
 		var d = weapon_def()
 		var want: float = minf(float(d.get("vel", 400.0)) / 20.0, 40.0) if not d.is_empty() else 0.0
 		var fwd = flat.normalized()
-		var side := Vector3(-fwd.z, 0, fwd.x)
+		var side = Vector3(-fwd.z, 0, fwd.x)
 		wish = (fwd * (1.0 if dist > want else (-0.5 if dist < want * 0.5 else 0.0)) + side * float(ai.strafe) * 0.8).normalized()
 		aiming = true
 		ai["react"] = float(ai.react) - dt
 		var w = current_weapon()
 		if w != null and float(ai.react) <= 0.0 and can_fire():
 			var err = (0.04 + (1.0 - skill) * 0.09 + (0.03 if tgt.move_speed > 1.0 else 0.0)) * (1.0 + dist / 120.0)
-			var aim_y := 1.55 if Game.rng.randf() < 0.12 * skill else 1.1
+			var aim_y = 1.55 if Game.rng.randf() < 0.12 * skill else 1.1
 			var aim: Vector3 = tgt.global_position + Vector3(0, aim_y if tgt.stance == 0 else 0.4, 0) + Vector3(Game.rng.randfn(0, err), Game.rng.randfn(0, err), Game.rng.randfn(0, err)) * dist
 			fire(aim)
 			var dd: Dictionary = Game.WEAPONS[w.id]
@@ -566,7 +566,7 @@ func _bot_step(dt: float) -> void:
 		if w != null and int(w.mag) == 0: start_reload()
 	elif ai.goal != null:
 		var g: Vector3 = ai.goal
-		var to2 := Vector3(g.x - global_position.x, 0, g.z - global_position.z)
+		var to2 = Vector3(g.x - global_position.x, 0, g.z - global_position.z)
 		if to2.length() < 1.3:
 			if ai.has("loot_id") and ai.loot_id >= 0 and match_ref: match_ref.request_pickup(self, int(ai.loot_id))
 			ai["goal"] = null; ai["loot_id"] = -1
@@ -597,7 +597,7 @@ func _bot_step(dt: float) -> void:
 func _bot_think() -> void:
 	ai["can_see"] = false
 	var eye = global_position + Vector3(0, 1.55, 0)
-	var best = null; var bd := 160.0 + skill * 60.0
+	var best = null; var bd = 160.0 + skill * 60.0
 	for s in match_ref.soldiers():
 		if s == self or not s.alive or s.state != "ground": continue
 		var d = global_position.distance_to(s.global_position)
@@ -612,7 +612,7 @@ func _bot_think() -> void:
 			return
 	if ai.target != null and (not is_instance_valid(ai.target) or not ai.target.alive): ai["target"] = null
 	var z: Dictionary = match_ref.zone
-	var here := Vector2(global_position.x, global_position.z)
+	var here = Vector2(global_position.x, global_position.z)
 	if here.distance_to(z.c) > float(z.r) * 0.85 or (float(z.timer) < 25.0 and here.distance_to(z.tc) > float(z.tr) * 0.8):
 		var dir: Vector2 = (z.tc - here).normalized()
 		var goal2: Vector2 = z.tc - dir * float(z.tr) * 0.4
@@ -623,7 +623,7 @@ func _bot_think() -> void:
 	if it != null:
 		ai["goal"] = it.pos; ai["loot_id"] = int(it.id); ai.erase("wander"); return
 	if ai.goal == null or global_position.distance_to(ai.goal) < 3.0:
-		var a = Game.rng.randf() * TAU; var r := Game.rng.randf_range(30.0, 80.0)
+		var a = Game.rng.randf() * TAU; var r = Game.rng.randf_range(30.0, 80.0)
 		var g = here + Vector2(cos(a), sin(a)) * r
 		if g.distance_to(z.tc) > float(z.tr) * 0.8: g = g.lerp(z.tc, 0.5)
 		ai["goal"] = Vector3(g.x, 0, g.y); ai["wander"] = true; ai["loot_id"] = -1

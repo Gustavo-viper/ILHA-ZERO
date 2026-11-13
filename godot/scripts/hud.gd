@@ -29,12 +29,12 @@ var end_panel: PanelContainer
 var end_title: Label
 var end_text: Label
 
-var hit_t := 0.0
-var hit_head := false
+var hit_t = 0.0
+var hit_head = false
 var hurt_dirs: Array = []    # [angle, t]
-var center_t := 0.0
-var show_map := false
-var show_inv := false
+var center_t = 0.0
+var show_map = false
+var show_inv = false
 
 func setup(m: Node, mr: Node, q: Node, tex: Texture2D) -> void:
 	main = m; match_ref = mr; quality = q; map_tex = tex
@@ -88,7 +88,7 @@ func _build_end_panel(root: Control) -> void:
 	end_panel.visible = false; root.add_child(end_panel)
 
 # ---------------------------------------------------------------- eventos
-func show_center(t: String, secs := 3.0) -> void:
+func show_center(t: String, secs = 3.0) -> void:
 	lbl_center.text = t; center_t = secs
 
 func hit(head: bool) -> void:
@@ -129,7 +129,7 @@ func _process(dt: float) -> void:
 	lbl_alive.text = "%d VIVOS" % match_ref.alive_count()
 	lbl_kills.text = "%d abates" % me.kills
 	var w = me.current_weapon()
-	var names := []
+	var names = []
 	for i in 3:
 		var ww = me.weapons[i]
 		var nm: String = Game.WEAPONS[ww.id].name if ww != null else "—"
@@ -146,7 +146,7 @@ func _process(dt: float) -> void:
 		lbl_action.text = "%s  %.1fs" % [nm2, maxf(0.0, me.action_t)]
 	else: lbl_action.text = ""
 	# aviso de interação
-	var prompt := ""
+	var prompt = ""
 	if me.state == "plane" and match_ref.phase != "countdown": prompt = "[F] Saltar do avião"
 	elif me.state == "air": prompt = "[F] Abrir paraquedas   ·   W mergulha"
 	elif me.alive and me.state == "ground":
@@ -179,7 +179,7 @@ func _inventory_text(me: Soldier) -> String:
 	for s in me.spare: lines.append("%s (sem arma compatível)" % Game.ATTACH[s])
 	for w in me.weapons:
 		if w != null:
-			var att := []
+			var att = []
 			if float(w.scope) > float(Game.WEAPONS[w.id].scope): att.append("mira %dx" % int(w.scope))
 			if w.extmag: att.append("carregador estendido")
 			if w.comp: att.append("compensador")
@@ -192,7 +192,7 @@ func _draw_compass(c: Control) -> void:
 	var heading = fposmod(rad_to_deg(-(me.look_yaw if me.freelook else me.yaw)), 360.0)
 	var w = c.size.x
 	c.draw_rect(Rect2(Vector2.ZERO, c.size), Color(0, 0, 0, 0.28))
-	var px_per_deg := 3.2
+	var px_per_deg = 3.2
 	var labels = {0: "N", 45: "NE", 90: "L", 135: "SE", 180: "S", 225: "SO", 270: "O", 315: "NO"}
 	for deg in range(0, 360, 5):
 		var dx = wrapf(deg - heading, -180.0, 180.0) * px_per_deg
@@ -212,7 +212,7 @@ func _draw_cross(c: Control) -> void:
 		var d = me.weapon_def()
 		var spread: float = (float(d.ads) if me.aiming else float(d.hip)) if not d.is_empty() else 0.02
 		if me.move_speed > 0.8: spread += 0.012
-		var gap := 4.0 + spread * 900.0 + me.recoil * 200.0
+		var gap = 4.0 + spread * 900.0 + me.recoil * 200.0
 		if me.aiming and gap < 6.0:
 			c.draw_circle(ctr, 2.0, Color(1.0, 0.25, 0.2))
 		else:
@@ -220,7 +220,7 @@ func _draw_cross(c: Control) -> void:
 				c.draw_line(ctr + v * gap, ctr + v * (gap + 9.0), Color(1, 1, 1, 0.9), 2.0)
 			c.draw_circle(ctr, 1.3, Color(1, 1, 1, 0.9))
 	if hit_t > 0.0:
-		var col := Color(1, 0.2, 0.2) if hit_head else Color.WHITE
+		var col = Color(1, 0.2, 0.2) if hit_head else Color.WHITE
 		for v in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 			c.draw_line(ctr + v * 6.0, ctr + v * 14.0, col, 2.0)
 
@@ -228,13 +228,13 @@ func _draw_scope(c: Control) -> void:
 	var ctr = c.size * 0.5
 	var r = c.size.y * 0.42
 	# escurece tudo fora do círculo
-	var pts := PackedVector2Array()
+	var pts = PackedVector2Array()
 	for i in 65: pts.append(ctr + Vector2(cos(i * TAU / 64.0), sin(i * TAU / 64.0)) * r)
 	c.draw_rect(Rect2(0, 0, ctr.x - r, c.size.y), Color.BLACK)
 	c.draw_rect(Rect2(ctr.x + r, 0, c.size.x - ctr.x - r, c.size.y), Color.BLACK)
 	for i in 64:
-		var a0 = i * TAU / 64.0; var a1 := (i + 1) * TAU / 64.0
-		var outer := PackedVector2Array([ctr + Vector2(cos(a0), sin(a0)) * r, ctr + Vector2(cos(a1), sin(a1)) * r, ctr + Vector2(cos(a1), sin(a1)) * r * 1.6, ctr + Vector2(cos(a0), sin(a0)) * r * 1.6])
+		var a0 = i * TAU / 64.0; var a1 = (i + 1) * TAU / 64.0
+		var outer = PackedVector2Array([ctr + Vector2(cos(a0), sin(a0)) * r, ctr + Vector2(cos(a1), sin(a1)) * r, ctr + Vector2(cos(a1), sin(a1)) * r * 1.6, ctr + Vector2(cos(a0), sin(a0)) * r * 1.6])
 		c.draw_colored_polygon(outer, Color.BLACK)
 	c.draw_line(Vector2(ctr.x - r, ctr.y), Vector2(ctr.x + r, ctr.y), Color(0, 0, 0, 0.9), 1.5)
 	c.draw_line(Vector2(ctr.x, ctr.y - r), Vector2(ctr.x, ctr.y + r), Color(0, 0, 0, 0.9), 1.5)
@@ -254,16 +254,16 @@ func _draw_bars(c: Control) -> void:
 		if fill > 0.0: c.draw_rect(Rect2(x, 0, seg_w * fill, 6), Color(1.0, 0.72, 0.2))
 	c.draw_rect(Rect2(0, 12, w, 22), Color(0, 0, 0, 0.5))
 	var hpk = clampf(me.hp / 100.0, 0.0, 1.0)
-	var col := Color(0.92, 0.92, 0.92) if hpk > 0.5 else (Color(1.0, 0.65, 0.3) if hpk > 0.25 else Color(1.0, 0.25, 0.2))
+	var col = Color(0.92, 0.92, 0.92) if hpk > 0.5 else (Color(1.0, 0.65, 0.3) if hpk > 0.25 else Color(1.0, 0.25, 0.2))
 	c.draw_rect(Rect2(2, 14, (w - 4) * hpk, 18), col)
 	c.draw_rect(Rect2(0, 12, w, 22), Color(1, 1, 1, 0.35), false, 1.0)
 
-func _map_draw(c: Control, center: Vector2, world_span: float, rect: Rect2, rotate_with_player := false) -> void:
+func _map_draw(c: Control, center: Vector2, world_span: float, rect: Rect2, rotate_with_player = false) -> void:
 	var me: Soldier = match_ref.local
 	var k = rect.size.x / world_span
 	var to_px = func(p: Vector2) -> Vector2: return rect.position + rect.size * 0.5 + (p - center) * k
 	var tex_k = map_tex.get_width() / Game.MAP_SIZE
-	var src := Rect2((center.x - world_span * 0.5 + Game.HALF) * tex_k, (center.y - world_span * 0.5 + Game.HALF) * tex_k, world_span * tex_k, world_span * tex_k)
+	var src = Rect2((center.x - world_span * 0.5 + Game.HALF) * tex_k, (center.y - world_span * 0.5 + Game.HALF) * tex_k, world_span * tex_k, world_span * tex_k)
 	c.draw_rect(rect, Color(0.12, 0.3, 0.42))
 	c.draw_texture_rect_region(map_tex, rect, src)
 	var z: Dictionary = match_ref.zone
@@ -275,19 +275,19 @@ func _map_draw(c: Control, center: Vector2, world_span: float, rect: Rect2, rota
 		var a: Vector3 = match_ref.plane.a; var b: Vector3 = match_ref.plane.b
 		c.draw_dashed_line(to_px.call(Vector2(a.x, a.z)), to_px.call(Vector2(b.x, b.z)), Color(1, 1, 1, 0.8), 2.0, 8.0)
 	var pp: Vector2 = to_px.call(Vector2(me.global_position.x, me.global_position.z))
-	var fwd := Vector2(-sin(me.yaw), -cos(me.yaw))
-	var side := Vector2(-fwd.y, fwd.x)
+	var fwd = Vector2(-sin(me.yaw), -cos(me.yaw))
+	var side = Vector2(-fwd.y, fwd.x)
 	c.draw_colored_polygon(PackedVector2Array([pp + fwd * 9.0, pp - fwd * 6.0 + side * 6.0, pp - fwd * 3.0, pp - fwd * 6.0 - side * 6.0]), Color(1.0, 0.8, 0.3))
 
 func _draw_minimap(c: Control) -> void:
 	var me: Soldier = match_ref.local
-	var r := Rect2(Vector2.ZERO, c.size)
+	var r = Rect2(Vector2.ZERO, c.size)
 	_map_draw(c, Vector2(me.global_position.x, me.global_position.z), 320.0, r)
 	c.draw_rect(r, Color(1, 1, 1, 0.5), false, 2.0)
 
 func _draw_bigmap(c: Control) -> void:
 	var s = minf(c.size.x, c.size.y) * 0.9
-	var r := Rect2((c.size - Vector2(s, s)) * 0.5, Vector2(s, s))
+	var r = Rect2((c.size - Vector2(s, s)) * 0.5, Vector2(s, s))
 	c.draw_rect(Rect2(Vector2.ZERO, c.size), Color(0, 0, 0, 0.55))
 	_map_draw(c, Vector2.ZERO, Game.MAP_SIZE, r)
 	for t in match_ref.world.towns:
@@ -300,9 +300,9 @@ func _draw_damage(c: Control) -> void:
 	for d in hurt_dirs:
 		var a: float = d[0]
 		var alpha = clampf(float(d[1]), 0.0, 1.0)
-		var dir := Vector2(sin(a), -cos(a))
+		var dir = Vector2(sin(a), -cos(a))
 		var p = ctr + dir * 150.0
-		var side := Vector2(-dir.y, dir.x)
+		var side = Vector2(-dir.y, dir.x)
 		c.draw_colored_polygon(PackedVector2Array([p + dir * 18.0, p + side * 34.0, p - side * 34.0]), Color(1, 0.1, 0.1, 0.65 * alpha))
 	var me: Soldier = match_ref.local
 	if me.alive and me.hp < 30.0:

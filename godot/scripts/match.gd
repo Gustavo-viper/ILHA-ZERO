@@ -6,7 +6,7 @@ signal killfeed(text: String, mine: bool)
 signal announce(text: String)
 signal match_ended(text: String)
 
-const ZONE_PHASES := [
+const ZONE_PHASES = [
 	{"wait": 90.0, "shrink": 60.0, "f": 0.62, "dps": 0.6},
 	{"wait": 70.0, "shrink": 50.0, "f": 0.55, "dps": 1.0},
 	{"wait": 60.0, "shrink": 40.0, "f": 0.5, "dps": 2.0},
@@ -17,30 +17,30 @@ const ZONE_PHASES := [
 ]
 
 var world
-var match_seed := 1
-var mrng := RandomNumberGenerator.new()
-var time := 0.0
-var phase := "countdown"     # countdown, plane, playing, ended
+var match_seed = 1
+var mrng = RandomNumberGenerator.new()
+var time = 0.0
+var phase = "countdown"     # countdown, plane, playing, ended
 var local: Soldier
 var soldiers_node: Node3D
-var loot := {}               # id -> {id, type, amount, pos, node}
-var next_loot_id := 100000
-var plane := {}              # a, b (Vector3), t0, dur, node
-var zone := {"c": Vector2.ZERO, "r": 2000.0, "tc": Vector2.ZERO, "tr": 2000.0, "timer": 0.0, "stage": -1, "shrinking": false, "dps": 0.4, "sc": Vector2.ZERO, "sr": 2000.0, "dur": 1.0}
+var loot = {}               # id -> {id, type, amount, pos, node}
+var next_loot_id = 100000
+var plane = {}              # a, b (Vector3), t0, dur, node
+var zone = {"c": Vector2.ZERO, "r": 2000.0, "tc": Vector2.ZERO, "tr": 2000.0, "timer": 0.0, "stage": -1, "shrinking": false, "dps": 0.4, "sc": Vector2.ZERO, "sr": 2000.0, "dur": 1.0}
 var zone_plan: Array = []
 var zone_mesh: MeshInstance3D
-var redzone := {}            # c, r, until
-var total_players := 0
+var redzone = {}            # c, r, until
+var total_players = 0
 var bullets: Array = []
 var tracer_pool: Array = []
 var sfx_pool: Array = []
-var sfx := {}
-var _sync_acc := 0.0
-var _zone_acc := 0.0
-var _time_acc := 0.0
-var _event_t := 0.0
-var _care_t := 0.0
-var ended := false
+var sfx = {}
+var _sync_acc = 0.0
+var _zone_acc = 0.0
+var _time_acc = 0.0
+var _event_t = 0.0
+var _care_t = 0.0
+var ended = false
 
 # ---------------------------------------------------------------- início
 func start(w: Node, seed_in: int, humans: Array, bot_count: int, my_peer: int) -> void:
@@ -48,12 +48,12 @@ func start(w: Node, seed_in: int, humans: Array, bot_count: int, my_peer: int) -
 	soldiers_node = Node3D.new(); soldiers_node.name = "Soldiers"; add_child(soldiers_node)
 	_make_sfx()
 	for i in 48:
-		var mi = MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.025, 0.025, 1.0); mi.mesh = bm
+		var mi = MeshInstance3D.new(); var bm = BoxMesh.new(); bm.size = Vector3(0.025, 0.025, 1.0); mi.mesh = bm
 		var m = StandardMaterial3D.new(); m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; m.albedo_color = Color(1.0, 0.85, 0.45); m.emission_enabled = true; m.emission = Color(1, 0.8, 0.4); m.emission_energy_multiplier = 3.0
 		mi.material_override = m; mi.visible = false; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi); tracer_pool.append(mi)
 	# soldados (nomes determinísticos em todos os computadores)
-	var tint := 0
+	var tint = 0
 	for hdef in humans:
 		var s = Soldier.new(); s.name = "p%d" % int(hdef[0]); s.peer_id = int(hdef[0])
 		soldiers_node.add_child(s)
@@ -68,7 +68,7 @@ func start(w: Node, seed_in: int, humans: Array, bot_count: int, my_peer: int) -
 		s.state = "plane"; s.visible = false
 		s.give("p9"); s.ammo["9mm"] = 15
 	# loot inicial (mesma sequência em todos os peers → mesmos ids)
-	var id := 1
+	var id = 1
 	for p in world.loot_spots:
 		if mrng.randf() < 0.15: continue
 		var t = Game.roll_loot(mrng)
@@ -77,13 +77,13 @@ func start(w: Node, seed_in: int, humans: Array, bot_count: int, my_peer: int) -
 			var at: String = "ammo:" + String(Game.WEAPONS[t].ammo)
 			_add_loot(id, at, _default_amount(at), p + Vector3(0.6, 0.05, 0.3)); id += 1
 	# plano da zona (determinístico)
-	var c = Vector2.ZERO; var r := Game.HALF * 1.5
+	var c = Vector2.ZERO; var r = Game.HALF * 1.5
 	for k in ZONE_PHASES.size():
 		var ph: Dictionary = ZONE_PHASES[k]
 		var nr = Game.HALF * 0.75 if k == 0 else r * float(ph.f)
 		var nc = c
 		for tries in 40:
-			var a = mrng.randf() * TAU; var d := mrng.randf() * maxf(0.0, r - nr) * (0.3 if k == 0 else 0.9)
+			var a = mrng.randf() * TAU; var d = mrng.randf() * maxf(0.0, r - nr) * (0.3 if k == 0 else 0.9)
 			nc = c + Vector2(cos(a), sin(a)) * d
 			if world.height_at(nc.x, nc.y) > 1.5: break
 		zone_plan.append({"c": nc, "r": nr})
@@ -98,8 +98,8 @@ func start(w: Node, seed_in: int, humans: Array, bot_count: int, my_peer: int) -
 	zone_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(zone_mesh)
 	# avião
-	var a2 = mrng.randf() * TAU; var off := mrng.randf_range(-0.4, 0.4) * Game.HALF
-	var dir := Vector3(cos(a2), 0, sin(a2)); var perp := Vector3(-dir.z, 0, dir.x)
+	var a2 = mrng.randf() * TAU; var off = mrng.randf_range(-0.4, 0.4) * Game.HALF
+	var dir = Vector3(cos(a2), 0, sin(a2)); var perp = Vector3(-dir.z, 0, dir.x)
 	var L = Game.HALF * 1.2
 	plane = {"a": -dir * L + perp * off + Vector3(0, 420, 0), "b": dir * L + perp * off + Vector3(0, 420, 0), "t0": 8.0}
 	plane["dur"] = (plane.b - plane.a).length() / 75.0
@@ -116,7 +116,7 @@ func soldiers() -> Array:
 	return soldiers_node.get_children() if soldiers_node else []
 
 func alive_count() -> int:
-	var n := 0
+	var n = 0
 	for s in soldiers():
 		if s.alive: n += 1
 	return n
@@ -126,15 +126,15 @@ func find_soldier(n: String) -> Soldier:
 
 # ---------------------------------------------------------------- avião
 func _make_plane_mesh() -> Node3D:
-	var n := Node3D.new()
+	var n = Node3D.new()
 	var body = StandardMaterial3D.new(); body.albedo_color = Color(0.62, 0.65, 0.6); body.metallic = 0.5; body.roughness = 0.45
 	var dark = StandardMaterial3D.new(); dark.albedo_color = Color(0.2, 0.22, 0.24)
-	var f = MeshInstance3D.new(); var cap := CapsuleMesh.new(); cap.radius = 2.4; cap.height = 30.0; f.mesh = cap; f.rotation.x = PI / 2.0; f.material_override = body; n.add_child(f)
-	var wg = MeshInstance3D.new(); var wb := BoxMesh.new(); wb.size = Vector3(40, 0.5, 6); wg.mesh = wb; wg.position = Vector3(0, 1.0, -1.0); wg.material_override = body; n.add_child(wg)
-	var tl = MeshInstance3D.new(); var tb := BoxMesh.new(); tb.size = Vector3(0.5, 7, 4.5); tl.mesh = tb; tl.position = Vector3(0, 4.0, 13.0); tl.material_override = body; n.add_child(tl)
-	var tw = MeshInstance3D.new(); var twb := BoxMesh.new(); twb.size = Vector3(14, 0.4, 3.5); tw.mesh = twb; tw.position = Vector3(0, 1.5, 13.0); tw.material_override = body; n.add_child(tw)
+	var f = MeshInstance3D.new(); var cap = CapsuleMesh.new(); cap.radius = 2.4; cap.height = 30.0; f.mesh = cap; f.rotation.x = PI / 2.0; f.material_override = body; n.add_child(f)
+	var wg = MeshInstance3D.new(); var wb = BoxMesh.new(); wb.size = Vector3(40, 0.5, 6); wg.mesh = wb; wg.position = Vector3(0, 1.0, -1.0); wg.material_override = body; n.add_child(wg)
+	var tl = MeshInstance3D.new(); var tb = BoxMesh.new(); tb.size = Vector3(0.5, 7, 4.5); tl.mesh = tb; tl.position = Vector3(0, 4.0, 13.0); tl.material_override = body; n.add_child(tl)
+	var tw = MeshInstance3D.new(); var twb = BoxMesh.new(); twb.size = Vector3(14, 0.4, 3.5); tw.mesh = twb; tw.position = Vector3(0, 1.5, 13.0); tw.material_override = body; n.add_child(tw)
 	for x in [-7.0, -13.0, 7.0, 13.0]:
-		var e = MeshInstance3D.new(); var cy := CylinderMesh.new(); cy.top_radius = 1.0; cy.bottom_radius = 1.2; cy.height = 4.5; e.mesh = cy; e.rotation.x = PI / 2.0; e.position = Vector3(x, 0.4, -3.5); e.material_override = dark; n.add_child(e)
+		var e = MeshInstance3D.new(); var cy = CylinderMesh.new(); cy.top_radius = 1.0; cy.bottom_radius = 1.2; cy.height = 4.5; e.mesh = cy; e.rotation.x = PI / 2.0; e.position = Vector3(x, 0.4, -3.5); e.material_override = dark; n.add_child(e)
 	return n
 
 func plane_pos() -> Vector3:
@@ -159,7 +159,7 @@ func _physics_process(dt: float) -> void:
 	if phase == "countdown" and time >= float(plane.t0):
 		phase = "plane"; announce.emit("Aperte F para saltar do avião")
 	if phase == "plane" or phase == "playing":
-		var pp = plane_pos(); var pr2 := plane_progress()
+		var pp = plane_pos(); var pr2 = plane_progress()
 		for s in soldiers():
 			if s.state != "plane": continue
 			s.global_position = pp
@@ -205,7 +205,7 @@ func _update_zone(dt: float, server: bool) -> void:
 			zone.shrinking = true; zone.timer = float(zone.dur); zone.sc = zone.c; zone.sr = zone.r
 			announce.emit("A zona azul está se fechando!")
 	elif bool(zone.shrinking):
-		var k := 1.0 - maxf(0.0, float(zone.timer)) / float(zone.dur)
+		var k = 1.0 - maxf(0.0, float(zone.timer)) / float(zone.dur)
 		zone.c = (zone.sc as Vector2).lerp(zone.tc, k); zone.r = lerpf(float(zone.sr), float(zone.tr), k)
 		if float(zone.timer) <= 0.0:
 			zone.shrinking = false
@@ -228,13 +228,13 @@ func _server_events(dt: float) -> void:
 	_event_t += dt; _care_t += dt
 	if _event_t > 100.0 and int(zone.stage) < 5:
 		_event_t = mrng.randf_range(0.0, 40.0)
-		var a = mrng.randf() * TAU; var d := mrng.randf() * float(zone.r) * 0.7
+		var a = mrng.randf() * TAU; var d = mrng.randf() * float(zone.r) * 0.7
 		var c: Vector2 = zone.c + Vector2(cos(a), sin(a)) * d
 		rpc_redzone.rpc(c, 90.0, time + 16.0)
 	if not redzone.is_empty() and time < float(redzone.until) and mrng.randf() < dt * 3.5:
-		var a2 = mrng.randf() * TAU; var d2 := sqrt(mrng.randf()) * float(redzone.r)
+		var a2 = mrng.randf() * TAU; var d2 = sqrt(mrng.randf()) * float(redzone.r)
 		var bc: Vector2 = redzone.c + Vector2(cos(a2), sin(a2)) * d2
-		var p := Vector3(bc.x, world.height_at(bc.x, bc.y), bc.y)
+		var p = Vector3(bc.x, world.height_at(bc.x, bc.y), bc.y)
 		rpc_bomb.rpc(p)
 		for s in soldiers():
 			if not s.alive or s.state != "ground": continue
@@ -246,7 +246,7 @@ func _server_events(dt: float) -> void:
 					_server_damage(s, 1, 90.0 * (1.0 - dist / 6.0) + 15.0, null, "bombardeio")
 	if _care_t > 140.0:
 		_care_t = mrng.randf_range(-40.0, 0.0)
-		var a3 = mrng.randf() * TAU; var d3 := mrng.randf() * float(zone.tr) * 0.8
+		var a3 = mrng.randf() * TAU; var d3 = mrng.randf() * float(zone.tr) * 0.8
 		var cc: Vector2 = zone.tc + Vector2(cos(a3), sin(a3)) * d3
 		rpc_care.rpc(Vector3(cc.x, world.height_at(cc.x, cc.y), cc.y), next_loot_id)
 		next_loot_id += 10
@@ -261,7 +261,7 @@ func rpc_bomb(p: Vector3) -> void:
 	_explosion(p)
 
 func _explosion(p: Vector3) -> void:
-	var mi = MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 1.0; sm.height = 2.0; mi.mesh = sm
+	var mi = MeshInstance3D.new(); var sm = SphereMesh.new(); sm.radius = 1.0; sm.height = 2.0; mi.mesh = sm
 	var m = StandardMaterial3D.new(); m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; m.albedo_color = Color(1.0, 0.55, 0.15); m.emission_enabled = true; m.emission = Color(1, 0.5, 0.1); m.emission_energy_multiplier = 6.0
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mi.material_override = m; mi.position = p; add_child(mi)
@@ -278,9 +278,9 @@ func _explosion(p: Vector3) -> void:
 func rpc_care(p: Vector3, base_id: int) -> void:
 	announce.emit("📦 Caixa de suprimentos caindo! (fumaça vermelha)")
 	var crate = Node3D.new(); add_child(crate)
-	var box = MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(1.4, 1.0, 1.4); box.mesh = bm
+	var box = MeshInstance3D.new(); var bm = BoxMesh.new(); bm.size = Vector3(1.4, 1.0, 1.4); box.mesh = bm
 	var mat = StandardMaterial3D.new(); mat.albedo_color = Color(0.3, 0.42, 0.62); box.material_override = mat; box.position.y = 0.5; crate.add_child(box)
-	var ch = MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 2.5; sm.height = 2.0; sm.is_hemisphere = true; ch.mesh = sm
+	var ch = MeshInstance3D.new(); var sm = SphereMesh.new(); sm.radius = 2.5; sm.height = 2.0; sm.is_hemisphere = true; ch.mesh = sm
 	var cm = StandardMaterial3D.new(); cm.albedo_color = Color(0.85, 0.25, 0.2); cm.cull_mode = BaseMaterial3D.CULL_DISABLED; ch.material_override = cm; ch.position.y = 4.0; crate.add_child(ch)
 	var smoke = GPUParticles3D.new(); smoke.amount = 40; smoke.lifetime = 6.0
 	var pm = ParticleProcessMaterial.new(); pm.direction = Vector3(0, 1, 0); pm.spread = 12.0; pm.initial_velocity_min = 2.0; pm.initial_velocity_max = 4.0; pm.gravity = Vector3(0.4, 0.6, 0); pm.scale_min = 1.5; pm.scale_max = 4.0; pm.color = Color(0.85, 0.15, 0.12, 0.6)
@@ -330,7 +330,7 @@ func _update_bullets(dt: float) -> void:
 		if not hit.is_empty():
 			var col = hit.collider
 			if col is Area3D and col.get_parent() is Soldier:
-				var target := col.get_parent() as Soldier
+				var target = col.get_parent() as Soldier
 				_puff(hit.position, true)
 				if bool(b.real) and is_instance_valid(sh): _report_hit(sh, target, int(hit.shape), float(b.dmg), String(b.wid))
 			else:
@@ -348,7 +348,7 @@ func _update_bullets(dt: float) -> void:
 	bullets = keep
 
 func _puff(p: Vector3, blood: bool) -> void:
-	var mi = MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 0.12; sm.height = 0.24; sm.radial_segments = 6; sm.rings = 3; mi.mesh = sm
+	var mi = MeshInstance3D.new(); var sm = SphereMesh.new(); sm.radius = 0.12; sm.height = 0.24; sm.radial_segments = 6; sm.rings = 3; mi.mesh = sm
 	var m = StandardMaterial3D.new(); m.albedo_color = Color(0.6, 0.05, 0.05, 0.9) if blood else Color(0.7, 0.66, 0.55, 0.8); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi); mi.global_position = p
 	var tw = create_tween(); tw.tween_property(mi, "scale", Vector3.ONE * 4.0, 0.4); tw.parallel().tween_property(m, "albedo_color:a", 0.0, 0.4); tw.tween_callback(mi.queue_free)
@@ -361,7 +361,7 @@ func _report_hit(shooter: Soldier, target: Soldier, part: int, dmg: float, wid: 
 @rpc("any_peer", "reliable")
 func rpc_req_damage(target_name: String, part: int, dmg: float, shooter_name: String, wid: String) -> void:
 	if not multiplayer.is_server(): return
-	var sh = find_soldier(shooter_name); var tg := find_soldier(target_name)
+	var sh = find_soldier(shooter_name); var tg = find_soldier(target_name)
 	if sh == null or tg == null or sh.peer_id != multiplayer.get_remote_sender_id(): return
 	if not Game.WEAPONS.has(wid) or dmg > float(Game.WEAPONS[wid].dmg) + 0.1: return   # validação básica
 	_server_damage(tg, part, dmg, sh, wid)
@@ -400,7 +400,7 @@ func on_soldier_killed(victim: Soldier, attacker, wid: String) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func rpc_killed(vn: String, kn: String, wid: String, place: int) -> void:
-	var v = find_soldier(vn); var k := find_soldier(kn)
+	var v = find_soldier(vn); var k = find_soldier(kn)
 	if v == null or not v.alive: return
 	v.place = place
 	var drop_pos = v.global_position
@@ -425,7 +425,7 @@ func rpc_killed(vn: String, kn: String, wid: String, place: int) -> void:
 		drop_item(String(inv[i][0]), drop_pos + Vector3(cos(a) * 0.9, 0.0, sin(a) * 0.9), int(inv[i][1]))
 	if v == local: Engine.get_main_loop().root.get_node("Main").on_local_dead(k, place)
 	if multiplayer.is_server():
-		var alive := []
+		var alive = []
 		for s in soldiers():
 			if s.alive: alive.append(s)
 		if alive.size() <= 1:
@@ -441,7 +441,7 @@ func rpc_end(wn: String, wname: String, kills_n: int) -> void:
 func _add_loot(id: int, t: String, amount: int, pos: Vector3) -> void:
 	if loot.has(id): return
 	var node = WeaponModels.build_item(t)
-	var ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.42; tm.outer_radius = 0.5; tm.rings = 16; tm.ring_segments = 4; ring.mesh = tm
+	var ring = MeshInstance3D.new(); var tm = TorusMesh.new(); tm.inner_radius = 0.42; tm.outer_radius = 0.5; tm.rings = 16; tm.ring_segments = 4; ring.mesh = tm
 	var rm = StandardMaterial3D.new(); rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; rm.albedo_color = Color(1.0, 0.85, 0.45, 0.5); rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	ring.material_override = rm; ring.position.y = 0.03; ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; node.add_child(ring)
 	add_child(node); node.global_position = pos
@@ -449,8 +449,8 @@ func _add_loot(id: int, t: String, amount: int, pos: Vector3) -> void:
 	loot[id] = {"id": id, "type": t, "amount": amount, "pos": pos, "node": node}
 	next_loot_id = maxi(next_loot_id, id + 1)
 
-func nearest_loot(pos: Vector3, max_d := 2.6):
-	var best = null; var bd := max_d
+func nearest_loot(pos: Vector3, max_d = 2.6):
+	var best = null; var bd = max_d
 	for id in loot:
 		var it: Dictionary = loot[id]
 		var d = pos.distance_to(it.pos)
@@ -460,13 +460,13 @@ func nearest_loot(pos: Vector3, max_d := 2.6):
 	return best
 
 func nearest_useful_loot(s: Soldier, radius: float):
-	var best = null; var bd := radius
+	var best = null; var bd = radius
 	for id in loot:
 		var it: Dictionary = loot[id]
 		var d = s.global_position.distance_to(it.pos)
 		if d > bd or absf(it.pos.y - s.global_position.y) > 3.0: continue
 		var t: String = it.type
-		var useful := false
+		var useful = false
 		if Game.WEAPONS.has(t): useful = s.weapons[0] == null and t != "p9"
 		elif t.begins_with("ammo:"): useful = s.current_weapon() != null and Game.WEAPONS[s.current_weapon().id].ammo == t.substr(5) and int(s.ammo.get(t.substr(5), 0)) < 120
 		elif Game.HEALS.has(t): useful = int(s.heals[t]) < 4
@@ -581,11 +581,11 @@ func _make_sfx() -> void:
 		add_child(p); sfx_pool.append(p)
 
 func _noise_burst(len_s: float, cutoff: float, vol: float) -> AudioStreamWAV:
-	var rate := 22050
+	var rate = 22050
 	var n = int(len_s * rate)
-	var data := PackedByteArray(); data.resize(n * 2)
+	var data = PackedByteArray(); data.resize(n * 2)
 	var a = clampf(cutoff / rate * 2.0 * PI, 0.01, 1.0)
-	var y := 0.0
+	var y = 0.0
 	var r = RandomNumberGenerator.new(); r.seed = int(cutoff)
 	for i in n:
 		var t = float(i) / n
