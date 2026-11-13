@@ -410,6 +410,21 @@ ESCARLATE|Tom de vermelho muito vivo
 ANIL|Tom de azul escuro, também chamado de índigo
 LILÁS|Tom de roxo bem claro
 SALMÃO|Cor rosada com tom alaranjado
+MAGENTA|Cor entre o vermelho e o roxo, usada nas impressoras
+CIANO|Azul-esverdeado claro, uma das tintas das impressoras
+OCRE|Tom amarelo-acastanhado de terra, usado desde as pinturas das cavernas
+CARMIM|Vermelho intenso tirado antigamente de um inseto, a cochonilha
+ÍNDIGO|Azul profundo tirado de uma planta, usado para tingir jeans
+ESMERALDA|Verde brilhante com nome de pedra preciosa
+BORDÔ|Vermelho escuro com nome de região francesa de vinhos
+CARAMELO|Tom marrom-dourado como o açúcar derretido
+OLIVA|Verde escuro e amarelado como a azeitona
+MOSTARDA|Amarelo escuro com nome de molho
+CREME|Branco levemente amarelado
+PÉROLA|Branco brilhante e suave como a joia do mar
+CHUMBO|Cinza escuro com nome de metal pesado
+MARFIM|Branco amarelado como o dente do elefante
+RUBI|Vermelho intenso com nome de pedra preciosa
 ` },
 { id: 'paises', nome: 'Países do mundo', icone: '🌍', cor: '#2f86c9', lista: `
 BRASIL|Maior país da América do Sul
