@@ -12,8 +12,9 @@ import { SSRPass } from 'three/addons/postprocessing/SSRPass.js';
 import { MAP_SIZE, HALF, WATER_LEVEL, GRID_N, GRID_RES } from './shared/world.js';
 import { TIERS } from './quality.js';
 import { makeTextures } from './textures.js';
-import { loadSoldier, soldierReady, makeRealCharacter, poseRealCharacter } from './realchar.js';
+import { loadSoldier, soldierReady, soldierError, makeRealCharacter, poseRealCharacter } from './realchar.js';
 export { loadSoldier, soldierReady };
+export const charStatus = () => soldierReady() ? 'realistas 3D (esqueleto + animações)' : soldierError ? 'simples (falha ao carregar modelo: ' + soldierError.slice(0, 60) + ')' : 'simples (carregando modelo…)';
 
 const SECTORS = 4;
 const FOG_COLOR = new THREE.Color(0xb4c9de);
@@ -149,9 +150,8 @@ export class GameScene {
     g.setAttribute('splat', new THREE.BufferAttribute(spl, 4));
     g.computeVertexNormals();
     if (!this.terrainMats) {
-      const det = TEX.dirt.clone(); det.needsUpdate = true; det.repeat.set(MAP_SIZE / 5, MAP_SIZE / 5);
-      const pair = M(0xffffff, { vc: true, map: det, rough: 0.95 });
-      pair.lo.color.setScalar(1.35); // a textura de terra escurece; compensa no Lambert
+      const det = TEX.plaster.clone(); det.needsUpdate = true; det.repeat.set(MAP_SIZE / 5, MAP_SIZE / 5);
+      const pair = M(0xffffff, { vc: true, map: det, rough: 0.95 }); // textura clara: só granulado, mantém a cor
       const hi = pair.hi; hi.vertexColors = false; hi.map = null; hi.color.setScalar(1);
       hi.onBeforeCompile = (sh) => {
         Object.assign(sh.uniforms, { tG: { value: TEX.grass }, tD: { value: TEX.dirt }, tR: { value: TEX.rock }, tS: { value: TEX.sand } });

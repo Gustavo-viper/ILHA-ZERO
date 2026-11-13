@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { World, HALF, MAP_SIZE, rayPlayer, WATER_LEVEL } from './shared/world.js';
 import { WEAPONS, ITEMS, STATE_NAME } from './shared/sim.js';
 import { detectHardware, TIERS, AutoTuner } from './quality.js';
-import { GameScene, createCharacter, poseAny, makeLoot, loadSoldier, setRealCharacters } from './scene.js';
+import { GameScene, createCharacter, poseAny, makeLoot, loadSoldier, charStatus } from './scene.js';
+const VERSION = 'v5 · personagens 3D realistas';
 import { OnlineTransport, LocalTransport } from './net.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +17,7 @@ const savedTier = store.get('tier', 'auto');
 let startTier = savedTier === 'auto' ? hw.tier : +savedTier;
 $('hwinfo').innerHTML = `GPU: <b>${esc(hw.gpu)}</b><br>CPU: <b>${hw.cores} núcleos</b> · RAM: <b>${hw.mem ? (hw.mem >= 8 ? '8+ GB' : hw.mem + ' GB') : 'n/d'}</b> · Tela: <b>${hw.screenW}×${hw.screenH}</b> · WebGL${hw.webgl2 ? '2' : '1'}<br>Qualidade automática: <b>${TIERS[hw.tier].name}</b> — ajusta sozinha durante o jogo pelo FPS.` + (hw.noWebGL ? '<br><b style="color:#f66">WebGL indisponível neste navegador.</b>' : '');
 $('name').value = store.get('name', '');
+$('hwinfo').innerHTML += `<br><span style="opacity:.6">${VERSION}</span>`;
 const canOnline = location.protocol.startsWith('http') && !/github\.io$/.test(location.hostname) && !window.IZ_OFFLINE_ONLY;
 if (!canOnline) { $('btnOnline').disabled = true; $('btnOnline').title = 'Rode o servidor (npm start) para jogar online'; $('btnOnline').textContent = 'ONLINE (requer o servidor Node — ver README)'; }
 
@@ -58,13 +60,12 @@ $('btnQuit').onclick = () => location.reload();
 $('btnMenu').onclick = () => location.reload();
 $('btnSpectate').onclick = () => { $('endscreen').classList.add('hidden'); lockPointer(); };
 
-// personagens realistas: carrega o modelo 3D já no menu (exceto no nível Batata)
-const soldierPromise = startTier >= 1 ? loadSoldier() : Promise.resolve(false);
-if (startTier < 1) setRealCharacters(false);
+// personagens realistas: carrega o modelo 3D já no menu (todos os níveis)
+const soldierPromise = loadSoldier();
 
 async function start(online) {
   audio();
-  if (startTier >= 1) { $('status').textContent = 'Carregando personagens 3D…'; await Promise.race([soldierPromise, new Promise((r) => setTimeout(r, 20000))]); }
+  $('status').textContent = 'Carregando personagens 3D…'; await Promise.race([soldierPromise, new Promise((r) => setTimeout(r, 20000))]);
   const name = ($('name').value.trim() || 'Jogador' + ((Math.random() * 900 + 100) | 0)).slice(0, 16);
   store.set('name', $('name').value.trim());
   G.myName = name;
@@ -481,7 +482,8 @@ function loop(t) {
     let dy = e.tyaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * k;
     const sp = Math.hypot(e.x - ox, e.z - oz) / Math.max(dt, 1e-4);
     e.mesh.position.set(e.x, e.y, e.z); e.mesh.rotation.y = e.yaw;
-    e.mesh.visible = e.state !== 'plane' && e.state !== 'spectator';
+    const camD = Math.hypot(e.x - G.gs.camera.position.x, e.z - G.gs.camera.position.z);
+    e.mesh.visible = e.state !== 'plane' && e.state !== 'spectator' && camD < G.gs.camera.far;
     const cd = Math.hypot(e.x - G.gs.camera.position.x, e.z - G.gs.camera.position.z);
     if (e.mesh.visible) poseAny(e.mesh, { speed: e.state === 'ground' || e.state === 'lobby' ? sp : 0, state: e.state, dead: !e.alive, crouch: e.crouch, weapon: e.weapon, pitch: e.pitch, aiming: true }, dt, cd);
   }
@@ -581,7 +583,7 @@ function updateHUD() {
   if (G.showPerf) {
     const ds = G.gs.drawingSize(); const info = G.gs.renderer.info.render;
     const res = ds.x >= 7600 ? ' (8K)' : ds.x >= 3800 ? ' (4K)' : ds.x >= 2500 ? ' (1440p)' : '';
-    perf.textContent = `FPS ${G.tuner.fps.toFixed(0)}  ·  ${TIERS[G.gs.tierId].name}${G.tuner.auto ? ' [auto]' : ''}\nRender ${ds.x}×${ds.y}${res}  escala ${G.gs.scale.toFixed(2)}x${G.tuner.dynRes ? ' dinâmica' : ''}\nDraw calls ${info.calls} · triângulos ${(info.triangles / 1000).toFixed(0)}k\n${G.gs.post.length ? 'Pós: ' + G.gs.post.join(', ') : 'Pós-processamento: nenhum'}${G.net.online ? '\nOnline' : '\nOffline (bots)'}`;
+    perf.textContent = `FPS ${G.tuner.fps.toFixed(0)}  ·  ${TIERS[G.gs.tierId].name}${G.tuner.auto ? ' [auto]' : ''}\nRender ${ds.x}×${ds.y}${res}  escala ${G.gs.scale.toFixed(2)}x${G.tuner.dynRes ? ' dinâmica' : ''}\nDraw calls ${info.calls} · triângulos ${(info.triangles / 1000).toFixed(0)}k\nPersonagens: ${charStatus()}\n${G.gs.post.length ? 'Pós: ' + G.gs.post.join(', ') : 'Pós-processamento: nenhum'}${G.net.online ? '\nOnline' : '\nOffline (bots)'}`;
   }
 }
 let centerT = null;

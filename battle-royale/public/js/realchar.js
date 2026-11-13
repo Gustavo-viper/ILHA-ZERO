@@ -9,16 +9,27 @@ let base = null, clips = null, loading = null;
 const VARIANT_TINTS = [0xffffff, 0xb7c49a, 0xd6c7a4, 0xa9b6c8, 0x8f8f86, 0xc9a98f];
 const variantMats = new Map();
 
+export let soldierError = null;
 export function loadSoldier(url = './models/soldier.glb') {
   if (!loading) {
-    // hospedagens que não servem .glb podem fornecer o modelo embutido num módulo JS
-    const src = window.IZ_SOLDIER_MODULE ? import(window.IZ_SOLDIER_MODULE).then((m) => m.default) : Promise.resolve(url);
-    loading = src.then((u) => new GLTFLoader().loadAsync(u)).then((gltf) => {
+    let p;
+    if (window.IZ_SOLDIER_MODULE) {
+      // modelo embutido num módulo JS (hospedagens que não servem .glb). Decodifica na memória:
+      // nada de fetch, que pode ser bloqueado pela política de segurança da página.
+      p = import(window.IZ_SOLDIER_MODULE).then((m) => {
+        const b64 = m.default.slice(m.default.indexOf(',') + 1), bin = atob(b64), buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        // força o carregador de texturas por <img> (blob:), também permitido nessas páginas
+        const cib = window.createImageBitmap; window.createImageBitmap = undefined;
+        try { return new GLTFLoader().parseAsync(buf.buffer, ''); } finally { window.createImageBitmap = cib; }
+      });
+    } else p = new GLTFLoader().loadAsync(url);
+    loading = p.then((gltf) => {
       base = gltf.scene; clips = {};
       for (const c of gltf.animations) clips[c.name] = c;
       base.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
       return true;
-    }).catch((e) => { console.warn('Modelo realista indisponível, usando personagem simples:', e); return false; });
+    }).catch((e) => { soldierError = String(e && e.message || e); console.warn('Modelo realista indisponível, usando personagem simples:', e); return false; });
   }
   return loading;
 }
