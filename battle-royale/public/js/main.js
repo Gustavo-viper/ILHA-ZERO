@@ -499,7 +499,7 @@ function loop(t) {
   gs.fx.update(dt);
   gs.setAltitudeView(me.state === 'plane' || me.state === 'air' || (me.state === 'chute' && me.y - G.world.heightAt(me.x, me.z) > 40));
   const focus = updateCamera(dt);
-  gs.render(focus);
+  gs.render(focus, dt);
   G.tuner.frame(dt);
   perfAcc += dt; if (perfAcc > 0.25) { perfAcc = 0; updateHUD(); }
   drawMinimap();
