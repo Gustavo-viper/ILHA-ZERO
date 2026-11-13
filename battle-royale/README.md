@@ -6,6 +6,8 @@ salto de paraquedas, armas e itens espalhados pelo mapa, e uma zona que encolhe.
 
 ## Como testar
 
+**Jeito mais fácil:** instale o [Node.js](https://nodejs.org) (versão LTS) e dê dois cliques em `iniciar-windows.bat` (ou rode `./iniciar-linux-mac.sh`). O jogo abre no navegador em `http://localhost:8080`, com os modos online e offline.
+
 ### Opção 1: offline contra bots (só abrir)
 Sirva a pasta `public/` em qualquer servidor estático e abra no navegador, por exemplo:
 
