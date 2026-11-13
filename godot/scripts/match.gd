@@ -304,13 +304,13 @@ func _care_landed(p: Vector3, base_id: int, ch: Node3D) -> void:
 
 # ---------------------------------------------------------------- balas (com queda)
 func spawn_bullet(shooter: Soldier, pos: Vector3, vel: Vector3, dmg: float, wid: String, real: bool) -> void:
-	var tr: MeshInstance3D = null
+	var trc: MeshInstance3D = null
 	for t in tracer_pool:
 		if not t.visible:
-			tr = t
+			trc = t
 			break
-	bullets.append({"pos": pos, "vel": vel, "shooter": shooter, "dmg": dmg, "wid": wid, "real": real, "life": 3.0, "tr": tr, "dist": 0.0})
-	if tr: tr.visible = true
+	bullets.append({"pos": pos, "vel": vel, "shooter": shooter, "dmg": dmg, "wid": wid, "real": real, "life": 3.0, "tr": trc, "dist": 0.0})
+	if trc: trc.visible = true
 
 func _update_bullets(dt: float) -> void:
 	if bullets.is_empty(): return
@@ -326,7 +326,7 @@ func _update_bullets(dt: float) -> void:
 		var sh: Soldier = b.shooter
 		if is_instance_valid(sh): q.exclude = [sh.get_rid(), sh.hitbox.get_rid()]
 		var hit = space.intersect_ray(q)
-		var tr: MeshInstance3D = b.tr
+		var trc: MeshInstance3D = b.tr
 		if not hit.is_empty():
 			var col = hit.collider
 			if col is Area3D and col.get_parent() is Soldier:
@@ -335,16 +335,16 @@ func _update_bullets(dt: float) -> void:
 				if bool(b.real) and is_instance_valid(sh): _report_hit(sh, target, int(hit.shape), float(b.dmg), String(b.wid))
 			else:
 				_puff(hit.position, false)
-			if tr: tr.visible = false
+			if trc: trc.visible = false
 			continue
 		b.pos = p1; b.vel = v; b.life = float(b.life) - dt; b.dist = float(b.dist) + (p1 - p0).length()
-		if tr:
+		if trc:
 			var mid = p0.lerp(p1, 0.5)
 			if float(b.dist) > 2.0:
-				tr.global_transform = Transform3D(Basis.looking_at(v.normalized(), Vector3.UP if absf(v.normalized().y) < 0.99 else Vector3.RIGHT), mid)
-				tr.scale = Vector3(1, 1, minf(14.0, v.length() * dt))
+				trc.global_transform = Transform3D(Basis.looking_at(v.normalized(), Vector3.UP if absf(v.normalized().y) < 0.99 else Vector3.RIGHT), mid)
+				trc.scale = Vector3(1, 1, minf(14.0, v.length() * dt))
 		if float(b.life) > 0.0 and p1.y > -20.0: keep.append(b)
-		elif tr: tr.visible = false
+		elif trc: trc.visible = false
 	bullets = keep
 
 func _puff(p: Vector3, blood: bool) -> void:

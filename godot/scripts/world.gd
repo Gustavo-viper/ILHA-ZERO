@@ -422,10 +422,10 @@ func _merge(parts: Array) -> Array:
 	var verts = PackedVector3Array(); var norms = PackedVector3Array(); var uvs = PackedVector2Array(); var idx = PackedInt32Array()
 	for p in parts:
 		var a: Array = (p[0] as PrimitiveMesh).get_mesh_arrays()
-		var tr: Transform3D = p[1]
+		var xf: Transform3D = p[1]
 		var base = verts.size()
-		for v in a[Mesh.ARRAY_VERTEX]: verts.append(tr * v)
-		for n in a[Mesh.ARRAY_NORMAL]: norms.append((tr.basis * n).normalized())
+		for v in a[Mesh.ARRAY_VERTEX]: verts.append(xf * v)
+		for n in a[Mesh.ARRAY_NORMAL]: norms.append((xf.basis * n).normalized())
 		for u in a[Mesh.ARRAY_TEX_UV]: uvs.append(u)
 		for i in a[Mesh.ARRAY_INDEX]: idx.append(base + i)
 	var arr = []; arr.resize(Mesh.ARRAY_MAX)
@@ -463,18 +463,18 @@ func _vegetation() -> void:
 	var meshes = _tree_meshes()
 	var per_sector = {}   # chave "si,sj,tipo" -> Array[Transform3D]
 	var colliders = {}    # chave setor -> StaticBody3D
-	var add = func(kind: int, tr: Transform3D, col_r: float, col_h: float) -> void:
-		var si = clampi(int((tr.origin.x + Game.HALF) / Game.MAP_SIZE * 4.0), 0, 3)
-		var sj = clampi(int((tr.origin.z + Game.HALF) / Game.MAP_SIZE * 4.0), 0, 3)
+	var add = func(kind: int, xf: Transform3D, col_r: float, col_h: float) -> void:
+		var si = clampi(int((xf.origin.x + Game.HALF) / Game.MAP_SIZE * 4.0), 0, 3)
+		var sj = clampi(int((xf.origin.z + Game.HALF) / Game.MAP_SIZE * 4.0), 0, 3)
 		var key = "%d,%d,%d" % [si, sj, kind]
 		if not per_sector.has(key): per_sector[key] = []
-		per_sector[key].append(tr)
+		per_sector[key].append(xf)
 		if col_r > 0.0:
 			var sk = "%d,%d" % [si, sj]
 			if not colliders.has(sk):
 				var b = StaticBody3D.new(); b.collision_layer = Game.L_WORLD; b.collision_mask = 0; add_child(b); colliders[sk] = b
 			var cs = CollisionShape3D.new(); var cy = CylinderShape3D.new(); cy.radius = col_r; cy.height = col_h
-			cs.shape = cy; cs.position = tr.origin + Vector3(0, col_h * 0.5, 0)
+			cs.shape = cy; cs.position = xf.origin + Vector3(0, col_h * 0.5, 0)
 			(colliders[sk] as StaticBody3D).add_child(cs)
 	var count = 0
 	for i in 9000:
