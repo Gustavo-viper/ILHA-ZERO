@@ -1,0 +1,11 @@
+{
+  "name": "Cruzadas do Saber",
+  "short_name": "Cruzadas",
+  "description": "Palavras cruzadas educativas com mais de mil palavras",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eef3fb",
+  "theme_color": "#2f6fd1",
+  "lang": "pt-BR",
+  "icons": [{ "src": "icone.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
