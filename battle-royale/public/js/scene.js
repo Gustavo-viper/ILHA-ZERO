@@ -12,6 +12,8 @@ import { SSRPass } from 'three/addons/postprocessing/SSRPass.js';
 import { MAP_SIZE, HALF, WATER_LEVEL, GRID_N, GRID_RES } from './shared/world.js';
 import { TIERS } from './quality.js';
 import { makeTextures } from './textures.js';
+import { loadSoldier, soldierReady, makeRealCharacter, poseRealCharacter } from './realchar.js';
+export { loadSoldier, soldierReady };
 
 const SECTORS = 4;
 const FOG_COLOR = new THREE.Color(0xb4c9de);
@@ -647,6 +649,21 @@ export function weaponGeo(type) {
 const weaponGeoCache = {};
 function wgeo(t) { return weaponGeoCache[t] || (weaponGeoCache[t] = weaponGeo(t)); }
 
+function makeChute() {
+  const chuteG = [];
+  const canopy = new THREE.SphereGeometry(3.4, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2.8); canopy.scale(1.25, 0.6, 0.9);
+  const cn = canopy.attributes.position.count, cc = new Float32Array(cn * 3);
+  for (let i = 0; i < cn; i++) { const a = Math.atan2(canopy.attributes.position.getZ(i), canopy.attributes.position.getX(i)); const stripe = Math.floor(((a + Math.PI) / (Math.PI * 2)) * 12) % 2; const c = new THREE.Color(stripe ? 0xe8e4d8 : 0x3f5a8a); cc.set([c.r, c.g, c.b], i * 3); }
+  canopy.setAttribute('color', new THREE.BufferAttribute(cc, 3)); canopy.translate(0, 3.2, 0); chuteG.push(canopy);
+  for (const [x, z] of [[-3, -1.2], [3, -1.2], [-3, 1.2], [3, 1.2], [0, -1.5], [0, 1.5]]) {
+    const dir = new THREE.Vector3(x, 3.0, z), len = dir.length();
+    const g = new THREE.CylinderGeometry(0.012, 0.012, len, 3); g.translate(0, len / 2, 0);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
+    chuteG.push(colorize(g, 0xdddddd));
+  }
+  return mesh(merge(chuteG), chuteMat);
+}
+
 export function makeCharacter(color) {
   const r = (k) => hash3(color % 997, k, 3.3);
   const shirt = [0x4f8a8c, 0x3f5f8a, 0xb8a888, 0x5a6240, 0x7a7a74, 0xd8d4c8, 0x2e3034, 0x8a4a3a][Math.floor(r(6) * 8)];
@@ -690,23 +707,26 @@ export function makeCharacter(color) {
   const gun = new THREE.Group(); gun.position.set(0.12, 0.4, -0.3); hips.add(gun);
   const guns = {};
   for (const t of ['pistol', 'smg', 'ar', 'shotgun', 'sniper']) { const m = mesh(wgeo(t), gunMat); m.visible = false; gun.add(m); guns[t] = m; }
-  // paraquedas: velame + cordas
-  const chuteG = [];
-  const canopy = new THREE.SphereGeometry(3.4, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2.8); canopy.scale(1.25, 0.6, 0.9);
-  const cn = canopy.attributes.position.count, cc = new Float32Array(cn * 3);
-  for (let i = 0; i < cn; i++) { const a = Math.atan2(canopy.attributes.position.getZ(i), canopy.attributes.position.getX(i)); const stripe = Math.floor(((a + Math.PI) / (Math.PI * 2)) * 12) % 2; const c = new THREE.Color(stripe ? 0xe8e4d8 : 0x3f5a8a); cc.set([c.r, c.g, c.b], i * 3); }
-  canopy.setAttribute('color', new THREE.BufferAttribute(cc, 3)); canopy.translate(0, 3.2, 0); chuteG.push(canopy);
-  for (const [x, z] of [[-3, -1.2], [3, -1.2], [-3, 1.2], [3, 1.2], [0, -1.5], [0, 1.5]]) {
-    const dir = new THREE.Vector3(x, 3.0, z), len = dir.length();
-    const g = new THREE.CylinderGeometry(0.012, 0.012, len, 3); g.translate(0, len / 2, 0);
-    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
-    chuteG.push(colorize(g, 0xdddddd));
-  }
-  const chute = mesh(merge(chuteG), chuteMat); chute.position.y = 1.4; chute.visible = false; root.add(chute);
+  const chute = makeChute(); chute.position.y = 1.4; chute.visible = false; root.add(chute);
   root.userData = { hips, legL, legR, armL, armR, gun, guns, chute, head, phase: 0 };
   root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return root;
 }
+
+// Personagem realista (modelo 3D com esqueleto) quando disponível; senão o simples.
+let useReal = true;
+export function setRealCharacters(v) { useReal = v; }
+export function createCharacter(color, seed) {
+  if (useReal && soldierReady()) {
+    return makeRealCharacter(seed ?? color, (g) => {
+      const guns = {};
+      for (const t of ['pistol', 'smg', 'ar', 'shotgun', 'sniper']) { const m = mesh(wgeo(t), gunMat); m.visible = false; m.castShadow = true; g.add(m); guns[t] = m; }
+      return guns;
+    }, makeChute);
+  }
+  return makeCharacter(color);
+}
+export function poseAny(ch, st, dt, camDist) { return ch.userData.real ? poseRealCharacter(ch, st, dt, camDist) : poseCharacter(ch, st, dt); }
 
 export function poseCharacter(ch, st, dt) {
   const u = ch.userData;
