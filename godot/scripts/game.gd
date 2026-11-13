@@ -78,7 +78,7 @@ func item_name(t: String) -> String:
 func roll_loot(r: RandomNumberGenerator) -> String:
 	var total := 0
 	for e in LOOT_TABLE: total += int(e[1])
-	var x := r.randi_range(1, total)
+	var x = r.randi_range(1, total)
 	for e in LOOT_TABLE:
 		x -= int(e[1])
 		if x <= 0: return String(e[0])
@@ -86,7 +86,7 @@ func roll_loot(r: RandomNumberGenerator) -> String:
 
 # ---------------------------------------------------------------- controles
 func _setup_input() -> void:
-	var keys := {
+	var keys = {
 		"move_forward": [KEY_W], "move_back": [KEY_S], "move_left": [KEY_A], "move_right": [KEY_D],
 		"jump": [KEY_SPACE], "crouch": [KEY_C], "prone": [KEY_Z], "sprint": [KEY_SHIFT], "walk": [KEY_CTRL],
 		"lean_left": [KEY_Q], "lean_right": [KEY_E], "interact": [KEY_F], "reload": [KEY_R],
@@ -97,11 +97,11 @@ func _setup_input() -> void:
 	for a in keys:
 		if not InputMap.has_action(a): InputMap.add_action(a)
 		for k in keys[a]:
-			var ev := InputEventKey.new(); ev.physical_keycode = k
+			var ev = InputEventKey.new(); ev.physical_keycode = k
 			InputMap.action_add_event(a, ev)
 	for pair in [["fire", MOUSE_BUTTON_LEFT], ["aim", MOUSE_BUTTON_RIGHT]]:
 		if not InputMap.has_action(pair[0]): InputMap.add_action(pair[0])
-		var mb := InputEventMouseButton.new(); mb.button_index = pair[1]
+		var mb = InputEventMouseButton.new(); mb.button_index = pair[1]
 		InputMap.action_add_event(pair[0], mb)
 
 func _load_settings() -> void:
@@ -116,7 +116,7 @@ func save_settings() -> void:
 
 # ---------------------------------------------------------------- hardware
 func detect_hardware() -> Dictionary:
-	var info := {
+	var info = {
 		"gpu": RenderingServer.get_video_adapter_name(),
 		"vendor": RenderingServer.get_video_adapter_vendor(),
 		"cores": OS.get_processor_count(),
@@ -124,7 +124,7 @@ func detect_hardware() -> Dictionary:
 		"compat": RenderingServer.get_rendering_device() == null,   # OpenGL (PCs antigos sem Vulkan)
 		"screen": DisplayServer.screen_get_size(),
 	}
-	var mi := OS.get_memory_info()
+	var mi = OS.get_memory_info()
 	if mi.has("physical") and int(mi["physical"]) > 0: info["mem_gb"] = float(mi["physical"]) / 1073741824.0
 	info["score"] = score_gpu(String(info["gpu"]))
 	var t: int = info["score"]
@@ -138,8 +138,8 @@ func detect_hardware() -> Dictionary:
 	return info
 
 func score_gpu(name: String) -> int:
-	var g := name.to_lower()
-	var tests := [
+	var g = name.to_lower()
+	var tests = [
 		[0, "swiftshader|llvmpipe|softpipe|software|basic render|gma|mali-[34]|powervr|videocore"],
 		[5, "rtx\\s?50\\d0|rtx\\s?40[6-9]0|rtx\\s?30[7-9]0|rx\\s?7[89]00|rx\\s?9070|rx\\s?6[89]00|m\\d (max|ultra)"],
 		[4, "rtx|rx\\s?[67]\\d{3}|arc a7|arc b|apple m[2-9]"],
@@ -149,7 +149,7 @@ func score_gpu(name: String) -> int:
 		[0, "hd graphics"],
 	]
 	for t in tests:
-		var re := RegEx.new(); re.compile(t[1])
+		var re = RegEx.new(); re.compile(t[1])
 		if re.search(g): return t[0]
 	return 1
 

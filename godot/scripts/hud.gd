@@ -1,9 +1,9 @@
 extends CanvasLayer
 ## Interface do jogo (desenhada por código).
 
-var main: Node
-var match_ref: Node
-var quality: Node
+var main
+var match_ref
+var quality
 var map_tex: Texture2D
 var font: Font
 
@@ -39,7 +39,7 @@ var show_inv := false
 func setup(m: Node, mr: Node, q: Node, tex: Texture2D) -> void:
 	main = m; match_ref = mr; quality = q; map_tex = tex
 	font = ThemeDB.fallback_font
-	var root := Control.new(); root.set_anchors_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
+	var root = Control.new(); root.set_anchors_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
 	scope_overlay = _canvas(root, Control.PRESET_FULL_RECT, _draw_scope); scope_overlay.visible = false
 	dmg_layer = _canvas(root, Control.PRESET_FULL_RECT, _draw_damage)
 	cross = _canvas(root, Control.PRESET_FULL_RECT, _draw_cross)
@@ -57,7 +57,7 @@ func setup(m: Node, mr: Node, q: Node, tex: Texture2D) -> void:
 	lbl_gear = _label(root, Control.PRESET_BOTTOM_LEFT, Vector2(20, -120), 16, HORIZONTAL_ALIGNMENT_LEFT, 420)
 	lbl_perf = _label(root, Control.PRESET_TOP_LEFT, Vector2(12, 10), 13, HORIZONTAL_ALIGNMENT_LEFT, 600)
 	lbl_inv = _label(root, Control.PRESET_CENTER_LEFT, Vector2(30, -220), 16, HORIZONTAL_ALIGNMENT_LEFT, 420); lbl_inv.visible = false
-	var bg := StyleBoxFlat.new(); bg.bg_color = Color(0, 0, 0, 0.6); bg.set_content_margin_all(14); bg.set_corner_radius_all(6)
+	var bg = StyleBoxFlat.new(); bg.bg_color = Color(0, 0, 0, 0.6); bg.set_content_margin_all(14); bg.set_corner_radius_all(6)
 	lbl_inv.add_theme_stylebox_override("normal", bg)
 	feed = VBoxContainer.new(); feed.set_anchors_preset(Control.PRESET_TOP_RIGHT); feed.position = Vector2(-470, 76); feed.size = Vector2(450, 200); feed.alignment = BoxContainer.ALIGNMENT_BEGIN
 	feed.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(feed)
@@ -66,12 +66,12 @@ func setup(m: Node, mr: Node, q: Node, tex: Texture2D) -> void:
 	match_ref.announce.connect(func(t): show_center(t, 4.0))
 
 func _canvas(parent: Control, preset: int, fn: Callable) -> Control:
-	var c := Control.new(); c.set_anchors_preset(preset); c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var c = Control.new(); c.set_anchors_preset(preset); c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.draw.connect(fn.bind(c)); parent.add_child(c)
 	return c
 
 func _label(parent: Control, preset: int, pos: Vector2, fs: int, align: int, w: float) -> Label:
-	var l := Label.new(); l.set_anchors_preset(preset); l.position = pos; l.size = Vector2(w, 30)
+	var l = Label.new(); l.set_anchors_preset(preset); l.position = pos; l.size = Vector2(w, 30)
 	l.horizontal_alignment = align; l.add_theme_font_size_override("font_size", fs)
 	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8)); l.add_theme_constant_override("shadow_offset_x", 1); l.add_theme_constant_override("shadow_offset_y", 1)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -79,12 +79,12 @@ func _label(parent: Control, preset: int, pos: Vector2, fs: int, align: int, w: 
 
 func _build_end_panel(root: Control) -> void:
 	end_panel = PanelContainer.new(); end_panel.set_anchors_preset(Control.PRESET_CENTER); end_panel.position = Vector2(-280, -150); end_panel.size = Vector2(560, 300)
-	var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.06, 0.08, 0.1, 0.92); sb.set_corner_radius_all(10); sb.set_content_margin_all(24); end_panel.add_theme_stylebox_override("panel", sb)
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 14); end_panel.add_child(v)
+	var sb = StyleBoxFlat.new(); sb.bg_color = Color(0.06, 0.08, 0.1, 0.92); sb.set_corner_radius_all(10); sb.set_content_margin_all(24); end_panel.add_theme_stylebox_override("panel", sb)
+	var v = VBoxContainer.new(); v.add_theme_constant_override("separation", 14); end_panel.add_child(v)
 	end_title = Label.new(); end_title.add_theme_font_size_override("font_size", 46); end_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_title.add_theme_color_override("font_color", Color(1.0, 0.75, 0.25)); v.add_child(end_title)
 	end_text = Label.new(); end_text.add_theme_font_size_override("font_size", 18); end_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; end_text.autowrap_mode = TextServer.AUTOWRAP_WORD; v.add_child(end_text)
-	var b1 := Button.new(); b1.text = "Assistir (Espaço troca de jogador)"; b1.pressed.connect(_on_watch); v.add_child(b1)
-	var b2 := Button.new(); b2.text = "Voltar ao menu"; b2.pressed.connect(func(): main.back_to_menu()); v.add_child(b2)
+	var b1 = Button.new(); b1.text = "Assistir (Espaço troca de jogador)"; b1.pressed.connect(_on_watch); v.add_child(b1)
+	var b2 = Button.new(); b2.text = "Voltar ao menu"; b2.pressed.connect(func(): main.back_to_menu()); v.add_child(b2)
 	end_panel.visible = false; root.add_child(end_panel)
 
 # ---------------------------------------------------------------- eventos
@@ -98,7 +98,7 @@ func hurt_from(angle: float) -> void:
 	hurt_dirs.append([angle, 1.2])
 
 func _on_feed(t: String, mine: bool) -> void:
-	var l := Label.new(); l.text = t; l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var l = Label.new(); l.text = t; l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	l.add_theme_font_size_override("font_size", 15)
 	l.add_theme_color_override("font_color", Color(1.0, 0.8, 0.35) if mine else Color(0.95, 0.95, 0.95))
 	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
@@ -164,14 +164,14 @@ func _process(dt: float) -> void:
 	lbl_perf.visible = bool(Game.settings["show_fps"])
 	if lbl_perf.visible:
 		var rs: Vector2i = quality.render_size()
-		var res_tag := " (8K)" if rs.x >= 7600 else (" (4K)" if rs.x >= 3800 else "")
+		var res_tag = " (8K)" if rs.x >= 7600 else (" (4K)" if rs.x >= 3800 else "")
 		lbl_perf.text = "FPS %d · %s%s\nRender %dx%d%s · escala %.2fx\nGPU: %s%s" % [int(quality.fps), Game.tier_name(quality.tier), " [auto]" if quality.auto else "", rs.x, rs.y, res_tag, quality.scale, Game.hw.get("gpu", "?"), " (OpenGL)" if Game.hw.get("compat", false) else ""]
 	for c in [compass, cross, minimap, bars, dmg_layer]: c.queue_redraw()
 	if scope_overlay.visible: scope_overlay.queue_redraw()
 	if bigmap.visible: bigmap.queue_redraw()
 
 func _inventory_text(me: Soldier) -> String:
-	var lines := ["INVENTÁRIO (Tab)", ""]
+	var lines = ["INVENTÁRIO (Tab)", ""]
 	for a in me.ammo:
 		if int(me.ammo[a]) > 0: lines.append("%s: %d" % [Game.AMMO_NAME[a], int(me.ammo[a])])
 	for hname in me.heals:
@@ -189,16 +189,16 @@ func _inventory_text(me: Soldier) -> String:
 # ---------------------------------------------------------------- desenho
 func _draw_compass(c: Control) -> void:
 	var me: Soldier = match_ref.local
-	var heading := fposmod(rad_to_deg(-(me.look_yaw if me.freelook else me.yaw)), 360.0)
-	var w := c.size.x
+	var heading = fposmod(rad_to_deg(-(me.look_yaw if me.freelook else me.yaw)), 360.0)
+	var w = c.size.x
 	c.draw_rect(Rect2(Vector2.ZERO, c.size), Color(0, 0, 0, 0.28))
 	var px_per_deg := 3.2
-	var labels := {0: "N", 45: "NE", 90: "L", 135: "SE", 180: "S", 225: "SO", 270: "O", 315: "NO"}
+	var labels = {0: "N", 45: "NE", 90: "L", 135: "SE", 180: "S", 225: "SO", 270: "O", 315: "NO"}
 	for deg in range(0, 360, 5):
-		var dx := wrapf(deg - heading, -180.0, 180.0) * px_per_deg
+		var dx = wrapf(deg - heading, -180.0, 180.0) * px_per_deg
 		if absf(dx) > w * 0.5 - 4.0: continue
-		var x := w * 0.5 + dx
-		var major := deg % 15 == 0
+		var x = w * 0.5 + dx
+		var major = deg % 15 == 0
 		c.draw_line(Vector2(x, 0), Vector2(x, 8 if major else 4), Color(1, 1, 1, 0.8), 1.0)
 		if labels.has(deg): c.draw_string(font, Vector2(x - 10, 28), labels[deg], HORIZONTAL_ALIGNMENT_CENTER, 20, 17, Color(1.0, 0.85, 0.4) if deg == 0 else Color.WHITE)
 		elif deg % 15 == 0: c.draw_string(font, Vector2(x - 14, 26), str(deg), HORIZONTAL_ALIGNMENT_CENTER, 28, 12, Color(1, 1, 1, 0.8))
@@ -207,9 +207,9 @@ func _draw_compass(c: Control) -> void:
 
 func _draw_cross(c: Control) -> void:
 	var me: Soldier = match_ref.local
-	var ctr := c.size * 0.5
+	var ctr = c.size * 0.5
 	if me.alive and me.state in ["ground", "lobby"] and not (me.aiming and me.scope_zoom() > 1.0):
-		var d := me.weapon_def()
+		var d = me.weapon_def()
 		var spread: float = (float(d.ads) if me.aiming else float(d.hip)) if not d.is_empty() else 0.02
 		if me.move_speed > 0.8: spread += 0.012
 		var gap := 4.0 + spread * 900.0 + me.recoil * 200.0
@@ -225,15 +225,15 @@ func _draw_cross(c: Control) -> void:
 			c.draw_line(ctr + v * 6.0, ctr + v * 14.0, col, 2.0)
 
 func _draw_scope(c: Control) -> void:
-	var ctr := c.size * 0.5
-	var r := c.size.y * 0.42
+	var ctr = c.size * 0.5
+	var r = c.size.y * 0.42
 	# escurece tudo fora do círculo
 	var pts := PackedVector2Array()
 	for i in 65: pts.append(ctr + Vector2(cos(i * TAU / 64.0), sin(i * TAU / 64.0)) * r)
 	c.draw_rect(Rect2(0, 0, ctr.x - r, c.size.y), Color.BLACK)
 	c.draw_rect(Rect2(ctr.x + r, 0, c.size.x - ctr.x - r, c.size.y), Color.BLACK)
 	for i in 64:
-		var a0 := i * TAU / 64.0; var a1 := (i + 1) * TAU / 64.0
+		var a0 = i * TAU / 64.0; var a1 := (i + 1) * TAU / 64.0
 		var outer := PackedVector2Array([ctr + Vector2(cos(a0), sin(a0)) * r, ctr + Vector2(cos(a1), sin(a1)) * r, ctr + Vector2(cos(a1), sin(a1)) * r * 1.6, ctr + Vector2(cos(a0), sin(a0)) * r * 1.6])
 		c.draw_colored_polygon(outer, Color.BLACK)
 	c.draw_line(Vector2(ctr.x - r, ctr.y), Vector2(ctr.x + r, ctr.y), Color(0, 0, 0, 0.9), 1.5)
@@ -244,25 +244,25 @@ func _draw_scope(c: Control) -> void:
 
 func _draw_bars(c: Control) -> void:
 	var me: Soldier = match_ref.local
-	var w := c.size.x
+	var w = c.size.x
 	# boost: 4 segmentos
 	for i in 4:
-		var seg_w := w / 4.0 - 4.0
-		var x := i * (w / 4.0)
+		var seg_w = w / 4.0 - 4.0
+		var x = i * (w / 4.0)
 		c.draw_rect(Rect2(x, 0, seg_w, 6), Color(0, 0, 0, 0.45))
-		var fill := clampf((me.boost - i * 25.0) / 25.0, 0.0, 1.0)
+		var fill = clampf((me.boost - i * 25.0) / 25.0, 0.0, 1.0)
 		if fill > 0.0: c.draw_rect(Rect2(x, 0, seg_w * fill, 6), Color(1.0, 0.72, 0.2))
 	c.draw_rect(Rect2(0, 12, w, 22), Color(0, 0, 0, 0.5))
-	var hpk := clampf(me.hp / 100.0, 0.0, 1.0)
+	var hpk = clampf(me.hp / 100.0, 0.0, 1.0)
 	var col := Color(0.92, 0.92, 0.92) if hpk > 0.5 else (Color(1.0, 0.65, 0.3) if hpk > 0.25 else Color(1.0, 0.25, 0.2))
 	c.draw_rect(Rect2(2, 14, (w - 4) * hpk, 18), col)
 	c.draw_rect(Rect2(0, 12, w, 22), Color(1, 1, 1, 0.35), false, 1.0)
 
 func _map_draw(c: Control, center: Vector2, world_span: float, rect: Rect2, rotate_with_player := false) -> void:
 	var me: Soldier = match_ref.local
-	var k := rect.size.x / world_span
-	var to_px := func(p: Vector2) -> Vector2: return rect.position + rect.size * 0.5 + (p - center) * k
-	var tex_k := map_tex.get_width() / Game.MAP_SIZE
+	var k = rect.size.x / world_span
+	var to_px = func(p: Vector2) -> Vector2: return rect.position + rect.size * 0.5 + (p - center) * k
+	var tex_k = map_tex.get_width() / Game.MAP_SIZE
 	var src := Rect2((center.x - world_span * 0.5 + Game.HALF) * tex_k, (center.y - world_span * 0.5 + Game.HALF) * tex_k, world_span * tex_k, world_span * tex_k)
 	c.draw_rect(rect, Color(0.12, 0.3, 0.42))
 	c.draw_texture_rect_region(map_tex, rect, src)
@@ -286,7 +286,7 @@ func _draw_minimap(c: Control) -> void:
 	c.draw_rect(r, Color(1, 1, 1, 0.5), false, 2.0)
 
 func _draw_bigmap(c: Control) -> void:
-	var s := minf(c.size.x, c.size.y) * 0.9
+	var s = minf(c.size.x, c.size.y) * 0.9
 	var r := Rect2((c.size - Vector2(s, s)) * 0.5, Vector2(s, s))
 	c.draw_rect(Rect2(Vector2.ZERO, c.size), Color(0, 0, 0, 0.55))
 	_map_draw(c, Vector2.ZERO, Game.MAP_SIZE, r)
@@ -296,12 +296,12 @@ func _draw_bigmap(c: Control) -> void:
 	c.draw_string(font, r.position + Vector2(10, 24), "Azul: zona atual · Branco: próxima área segura · Vermelho: bombardeio", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
 
 func _draw_damage(c: Control) -> void:
-	var ctr := c.size * 0.5
+	var ctr = c.size * 0.5
 	for d in hurt_dirs:
 		var a: float = d[0]
-		var alpha := clampf(float(d[1]), 0.0, 1.0)
+		var alpha = clampf(float(d[1]), 0.0, 1.0)
 		var dir := Vector2(sin(a), -cos(a))
-		var p := ctr + dir * 150.0
+		var p = ctr + dir * 150.0
 		var side := Vector2(-dir.y, dir.x)
 		c.draw_colored_polygon(PackedVector2Array([p + dir * 18.0, p + side * 34.0, p - side * 34.0]), Color(1, 0.1, 0.1, 0.65 * alpha))
 	var me: Soldier = match_ref.local

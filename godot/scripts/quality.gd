@@ -13,7 +13,7 @@ const TIERS := [
 
 var env: Environment
 var sun: DirectionalLight3D
-var world: Node
+var world
 var tier := 1
 var scale := 1.0
 var auto := true
@@ -39,11 +39,11 @@ func setup(e: Environment, s: DirectionalLight3D, w: Node) -> void:
 func apply(t: int) -> void:
 	tier = clampi(t, 0, 5)
 	var T: Dictionary = TIERS[tier]
-	var vp := get_viewport()
+	var vp = get_viewport()
 	scale = clampf(float(T.scale), float(T.min), max_scale())
 	if tier == 5: scale = max_scale()
 	_set_scale(scale)
-	var m := int(T.msaa)
+	var m = int(T.msaa)
 	vp.msaa_3d = Viewport.MSAA_4X if m >= 4 else (Viewport.MSAA_2X if m >= 2 else Viewport.MSAA_DISABLED)
 	vp.use_taa = bool(T.taa) and not compat
 	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if not bool(T.taa) else Viewport.SCREEN_SPACE_AA_DISABLED
@@ -64,7 +64,7 @@ func apply(t: int) -> void:
 		RenderingServer.environment_set_sdfgi_ray_count(RenderingServer.ENV_SDFGI_RAY_COUNT_96 if tier == 5 else RenderingServer.ENV_SDFGI_RAY_COUNT_32)
 	if env.ssr_enabled: env.ssr_max_steps = 96 if tier == 5 else 48
 	# distância de visão / neblina
-	var cam := vp.get_camera_3d()
+	var cam = vp.get_camera_3d()
 	if cam: cam.far = float(T.view) + 300.0
 	env.fog_enabled = true
 	env.fog_density = 0.0028 if tier == 0 else (0.0016 if tier == 1 else 0.0008)
@@ -75,13 +75,13 @@ func max_scale() -> float:
 	var T: Dictionary = TIERS[tier]
 	if tier == 5:
 		# supersampling: renderiza acima da tela, até 7680x4320 (8K) se a GPU aguentar
-		var w := float(get_viewport().get_visible_rect().size.x)
+		var w = float(get_viewport().get_visible_rect().size.x)
 		return clampf(7680.0 / maxf(w, 1.0), 1.0, 2.0)
 	return float(T.max)
 
 func _set_scale(s: float) -> void:
 	scale = s
-	var vp := get_viewport()
+	var vp = get_viewport()
 	if s < 0.999 and not compat:
 		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2 if tier >= 2 else Viewport.SCALING_3D_MODE_FSR
 	else:
@@ -97,7 +97,7 @@ func _process(dt: float) -> void:
 		_grace -= 1
 		return
 	var T: Dictionary = TIERS[tier]
-	var target := float(T.target)
+	var target = float(T.target)
 	if dyn_res:
 		if fps < target - 4.0 and scale > float(T.min): _set_scale(maxf(float(T.min), scale * (0.82 if fps < target * 0.6 else 0.92)))
 		elif fps > target + 2.0 and scale < max_scale(): _set_scale(minf(max_scale(), scale * 1.04))
@@ -113,5 +113,5 @@ func _process(dt: float) -> void:
 		apply(tier + 1); tier_changed.emit(tier, "up")
 
 func render_size() -> Vector2i:
-	var s := get_viewport().get_visible_rect().size
+	var s = get_viewport().get_visible_rect().size
 	return Vector2i(int(s.x * scale), int(s.y * scale))
