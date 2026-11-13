@@ -16,7 +16,7 @@ const savedTier = store.get('tier', 'auto');
 let startTier = savedTier === 'auto' ? hw.tier : +savedTier;
 $('hwinfo').innerHTML = `GPU: <b>${esc(hw.gpu)}</b><br>CPU: <b>${hw.cores} núcleos</b> · RAM: <b>${hw.mem ? (hw.mem >= 8 ? '8+ GB' : hw.mem + ' GB') : 'n/d'}</b> · Tela: <b>${hw.screenW}×${hw.screenH}</b> · WebGL${hw.webgl2 ? '2' : '1'}<br>Qualidade automática: <b>${TIERS[hw.tier].name}</b> — ajusta sozinha durante o jogo pelo FPS.` + (hw.noWebGL ? '<br><b style="color:#f66">WebGL indisponível neste navegador.</b>' : '');
 $('name').value = store.get('name', '');
-const canOnline = location.protocol.startsWith('http') && !/github\.io$/.test(location.hostname);
+const canOnline = location.protocol.startsWith('http') && !/github\.io$/.test(location.hostname) && !window.IZ_OFFLINE_ONLY;
 if (!canOnline) { $('btnOnline').disabled = true; $('btnOnline').title = 'Rode o servidor (npm start) para jogar online'; $('btnOnline').textContent = 'ONLINE (requer o servidor Node — ver README)'; }
 
 // ---------------------------------------------------------------- estado global
