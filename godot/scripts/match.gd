@@ -445,7 +445,8 @@ func _add_loot(id: int, t: String, amount: int, pos: Vector3) -> void:
 	var rm = StandardMaterial3D.new(); rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; rm.albedo_color = Color(1.0, 0.85, 0.45, 0.5); rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	ring.material_override = rm; ring.position.y = 0.03; ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; node.add_child(ring)
 	add_child(node); node.global_position = pos
-	node.visibility_range_end = 70.0 if node is GeometryInstance3D else 0.0
+	for g in node.find_children("*", "GeometryInstance3D", true, false):
+		g.visibility_range_end = 70.0   # itens somem ao longe (economia)
 	loot[id] = {"id": id, "type": t, "amount": amount, "pos": pos, "node": node}
 	next_loot_id = maxi(next_loot_id, id + 1)
 
