@@ -1,16 +1,5 @@
-# Palavras Ocultas Forge v6
+# ILHA ZERO — Battle Royale no navegador
 
-Versão autocontida. O jogo, banco de palavras e lógica principal estão dentro do `index.html`.
-A inicialização não depende de `app.js` nem de `words.js`.
+Todo o jogo está na pasta [`battle-royale/`](battle-royale/). As instruções completas estão no [README do jogo](battle-royale/README.md).
 
-- Mais de 1.000 palavras
-- Offline/PWA
-- Logo local
-- Seleção por toque/arraste
-- Dica
-- Pontuação
-- Estatísticas
-
-
-## v7 — correção de inicialização
-Corrigidos 25 seletores JavaScript que impediam o botão Jogar e as telas do jogo de localizar os elementos HTML.
+**Para jogar:** instale o [Node.js](https://nodejs.org) (versão LTS) e dê dois cliques em `battle-royale/iniciar-windows.bat`. No Linux ou Mac, rode `battle-royale/iniciar-linux-mac.sh`. Depois abra `http://localhost:8080`.
