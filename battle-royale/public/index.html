@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ILHA ZERO — Battle Royale</title>
+<meta name="description" content="Battle royale de mundo aberto no navegador. Roda em PC fraco e escala até gráficos extremos.">
+<style>
+  :root { --acc: #ffb02e; --bg: rgba(10, 14, 20, .72); --line: rgba(255,255,255,.14); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0f14; color: #eef2f6; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; user-select: none; }
+  canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  .hidden { display: none !important; }
+  button { font: inherit; cursor: pointer; }
+
+  /* ---------- MENU ---------- */
+  #menu { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 16px 0; background: radial-gradient(1200px 600px at 70% 20%, #2b3d52 0%, #0b0f14 60%); z-index: 20; }
+  #menu .card { margin: auto; width: min(560px, 92vw); padding: 28px; border: 1px solid var(--line); background: var(--bg); border-radius: 14px; backdrop-filter: blur(6px); }
+  #menu h1 { margin: 0 0 2px; font-size: 44px; letter-spacing: 3px; font-weight: 900; }
+  #menu h1 span { color: var(--acc); }
+  #menu .sub { opacity: .75; margin-bottom: 18px; }
+  label.f { display: block; font-size: 13px; opacity: .8; margin: 12px 0 6px; }
+  input[type=text], select { width: 100%; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line); background: #121a24; color: #fff; font-size: 16px; }
+  .btns { display: grid; gap: 10px; margin-top: 18px; }
+  .btn { padding: 14px; border-radius: 10px; border: 0; font-weight: 800; font-size: 17px; letter-spacing: .5px; }
+  .btn.pri { background: var(--acc); color: #1b1203; }
+  .btn.sec { background: #1f2b3a; color: #fff; border: 1px solid var(--line); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .hw { margin-top: 16px; font-size: 12.5px; line-height: 1.55; padding: 10px 12px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+  .hw b { color: var(--acc); }
+  .keys { margin-top: 12px; font-size: 12px; opacity: .7; line-height: 1.6; }
+  kbd { background: #263445; border-radius: 4px; padding: 1px 6px; border: 1px solid #3a4b60; font-size: 11px; }
+  #status { margin-top: 10px; min-height: 18px; font-size: 13px; color: #ffcf7a; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-weight: 600; text-shadow: 0 1px 2px #000a; }
+  #cross { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
+  #cross::before, #cross::after { content: ""; position: absolute; background: #fff; box-shadow: 0 0 2px #000; }
+  #cross::before { left: 10px; top: 0; width: 2px; height: 22px; }
+  #cross::after { top: 10px; left: 0; height: 2px; width: 22px; }
+  #cross.ads { width: 6px; height: 6px; } #cross.ads::before, #cross.ads::after { display: none; }
+  #cross.ads { background: #f33; border-radius: 50%; }
+  #hitmark { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%) rotate(45deg); opacity: 0; transition: opacity .15s; }
+  #hitmark::before, #hitmark::after { content: ""; position: absolute; background: #fff; }
+  #hitmark::before { left: 14px; top: 0; width: 2px; height: 30px; } #hitmark::after { top: 14px; left: 0; height: 2px; width: 30px; }
+  #hitmark.kill::before, #hitmark.kill::after { background: #ff3b3b; }
+  #scope { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, transparent 0 33vh, #000 33.3vh); }
+  #scope::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #000; }
+  #scope::after { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #000; }
+
+  #bottom { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(460px, 70vw); text-align: center; }
+  #hpbar { height: 14px; background: rgba(0,0,0,.5); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+  #hpfill { height: 100%; width: 100%; background: #eaeaea; transition: width .15s; }
+  #hpfill.low { background: #ff4d4d; }
+  #gear { font-size: 12px; margin-bottom: 4px; opacity: .9; }
+  #weapons { position: absolute; right: 24px; bottom: 22px; text-align: right; }
+  .wslot { padding: 6px 12px; margin-top: 6px; background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 6px; font-size: 14px; opacity: .55; }
+  .wslot.on { opacity: 1; border-color: var(--acc); }
+  #ammo { font-size: 34px; font-weight: 800; }
+  #ammo small { font-size: 16px; opacity: .7; }
+  #items { position: absolute; left: 24px; bottom: 22px; font-size: 14px; line-height: 1.7; }
+  #topright { position: absolute; right: 16px; top: 14px; display: flex; gap: 8px; align-items: flex-start; }
+  .pill { background: rgba(0,0,0,.5); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 15px; }
+  .pill b { color: var(--acc); font-size: 18px; }
+  #minimap { width: 190px; height: 190px; border: 2px solid rgba(255,255,255,.4); border-radius: 6px; background: #000; }
+  #compass { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: 420px; height: 26px; overflow: hidden; background: rgba(0,0,0,.35); border-radius: 4px; mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent); }
+  #compass .strip { position: absolute; top: 4px; white-space: nowrap; font-size: 13px; }
+  #compass::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 2px; height: 6px; background: var(--acc); }
+  #zoneinfo { position: absolute; left: 50%; top: 44px; transform: translateX(-50%); font-size: 14px; background: rgba(0,0,0,.4); padding: 4px 12px; border-radius: 6px; }
+  #center-msg { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: 26px; font-weight: 800; text-align: center; }
+  #prompt { position: absolute; left: 50%; top: 60%; transform: translateX(-50%); font-size: 16px; background: rgba(0,0,0,.55); padding: 6px 14px; border-radius: 6px; }
+  #killfeed { position: absolute; right: 16px; top: 230px; font-size: 13.5px; text-align: right; }
+  #killfeed div { background: rgba(0,0,0,.45); padding: 3px 8px; margin-bottom: 4px; border-radius: 4px; }
+  #killfeed .me { color: var(--acc); }
+  #action { position: absolute; left: 50%; top: 66%; transform: translateX(-50%); width: 220px; text-align: center; font-size: 13px; }
+  #action .bar { height: 5px; background: rgba(255,255,255,.2); margin-top: 4px; } #action .bar i { display: block; height: 100%; background: var(--acc); width: 0; }
+  #perf { position: absolute; left: 10px; top: 10px; font: 600 12px/1.45 ui-monospace, Menlo, Consolas, monospace; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 5px; white-space: pre; }
+  #dmgdir { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  .darrow { position: absolute; left: -40px; top: -140px; width: 80px; height: 30px; background: radial-gradient(ellipse at 50% 100%, rgba(255,40,40,.85), transparent 70%); transform-origin: 40px 140px; animation: fade 1.2s forwards; }
+  @keyframes fade { to { opacity: 0; } }
+  #vignette { position: absolute; inset: 0; box-shadow: inset 0 0 160px rgba(255,0,0,0); transition: box-shadow .25s; }
+  #clickhint { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(0,0,0,.65); border: 1px solid var(--acc); padding: 14px 22px; border-radius: 10px; font-size: 18px; }
+  #bigmap { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(86vh, 86vw); height: min(86vh, 86vw); border: 2px solid #fff6; border-radius: 6px; z-index: 8; pointer-events: none; }
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; background: rgba(5,8,12,.72); }
+  .panel { width: min(620px, 94vw); max-height: 90vh; overflow: auto; padding: 22px 24px; background: #111923; border: 1px solid var(--line); border-radius: 12px; }
+  .panel h2 { margin: 0 0 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #ffffff10; font-size: 14px; }
+  .row select, .row input[type=range] { width: 55%; }
+  .row select { padding: 7px; font-size: 14px; }
+  #endscreen .big { font-size: 54px; font-weight: 900; color: var(--acc); text-align: center; }
+  #endscreen .mid { text-align: center; font-size: 18px; margin: 6px 0 16px; opacity: .9; }
+  .note { font-size: 12px; opacity: .65; line-height: 1.5; margin-top: 10px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="menu">
+  <div class="card">
+    <h1>ILHA <span>ZERO</span></h1>
+    <div class="sub">Battle royale de mundo aberto · 30 jogadores · ilha de 1,6 km²</div>
+    <label class="f" for="name">Seu nome</label>
+    <input type="text" id="name" maxlength="16" placeholder="Jogador">
+    <div class="btns">
+      <button class="btn pri" id="btnOnline">JOGAR ONLINE (multiplayer)</button>
+      <button class="btn sec" id="btnOffline">JOGAR OFFLINE contra bots</button>
+      <button class="btn sec" id="btnSettings">Gráficos e controles</button>
+    </div>
+    <div id="status"></div>
+    <div class="hw" id="hwinfo">Detectando hardware…</div>
+    <div class="keys">
+      <kbd>WASD</kbd> mover · <kbd>Shift</kbd> correr · <kbd>Espaço</kbd> pular · <kbd>C</kbd> agachar · <kbd>Mouse</kbd> mirar/atirar · <kbd>Botão direito</kbd> mira (ADS)<br>
+      <kbd>E</kbd> pegar item · <kbd>R</kbd> recarregar · <kbd>1</kbd>/<kbd>2</kbd> armas · <kbd>3</kbd> bandagem · <kbd>4</kbd> kit médico · <kbd>F</kbd> saltar do avião / abrir paraquedas · <kbd>M</kbd> mapa · <kbd>Esc</kbd> menu
+    </div>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="vignette"></div>
+  <div id="scope" class="hidden"></div>
+  <div id="cross"></div>
+  <div id="hitmark"></div>
+  <div id="dmgdir"></div>
+  <div id="compass"><div class="strip" id="compassStrip"></div></div>
+  <div id="zoneinfo"></div>
+  <div id="center-msg"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="action" class="hidden"><span id="actionTxt"></span><div class="bar"><i id="actionBar"></i></div></div>
+  <div id="topright">
+    <div>
+      <div class="pill">Vivos <b id="alive">0</b></div>
+      <div class="pill" style="margin-top:6px">Abates <b id="kills">0</b></div>
+    </div>
+    <canvas id="minimap" width="190" height="190"></canvas>
+  </div>
+  <div id="killfeed"></div>
+  <div id="items"></div>
+  <div id="bottom"><div id="gear"></div><div id="hpbar"><div id="hpfill"></div></div></div>
+  <div id="weapons"><div id="ammo"></div><div id="slot0" class="wslot"></div><div id="slot1" class="wslot"></div></div>
+  <div id="perf"></div>
+  <div id="clickhint" class="hidden">🖱 Clique na tela para controlar o personagem</div>
+</div>
+<canvas id="bigmap" class="hidden" width="900" height="900"></canvas>
+
+<div id="settings" class="overlay hidden">
+  <div class="panel">
+    <h2>Gráficos e controles</h2>
+    <div class="row"><span>Qualidade</span><select id="qTier"></select></div>
+    <div class="row"><span>Resolução dinâmica (mantém o FPS)</span><input type="checkbox" id="qDyn" checked></div>
+    <div class="row"><span>Escala de resolução <b id="qScaleV"></b></span><input type="range" id="qScale" min="0.3" max="4" step="0.05"></div>
+    <div class="row"><span>Mostrar FPS / informações</span><input type="checkbox" id="qPerf" checked></div>
+    <div class="row"><span>Sensibilidade do mouse</span><input type="range" id="qSens" min="0.3" max="3" step="0.05" value="1"></div>
+    <div class="row"><span>Volume</span><input type="range" id="qVol" min="0" max="1" step="0.05" value="0.6"></div>
+    <div class="note" id="qNote"></div>
+    <div class="btns"><button class="btn pri" id="btnResume">Continuar</button><button class="btn sec hidden" id="btnQuit">Sair para o menu</button></div>
+  </div>
+</div>
+
+<div id="endscreen" class="overlay hidden">
+  <div class="panel">
+    <div class="big" id="endBig"></div>
+    <div class="mid" id="endMid"></div>
+    <div class="btns"><button class="btn pri" id="btnSpectate">Assistir / aguardar próxima partida</button><button class="btn sec" id="btnMenu">Voltar ao menu</button></div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
