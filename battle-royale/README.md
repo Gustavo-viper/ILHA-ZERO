@@ -79,8 +79,21 @@ battle-royale/
 O mesmo `sim.js` roda no servidor (multiplayer) e dentro do navegador (modo offline), então as regras são idênticas nos dois modos.
 O servidor valida tiros (cadência, munição, alcance e linha de visão), coleta de itens e velocidade de movimento.
 
+## Personagens realistas
+A partir do nível **Baixo**, os jogadores e bots usam um modelo humano 3D com esqueleto de 49 ossos e animações
+de parado, andando e correndo, misturadas suavemente conforme a velocidade. A coluna e a cabeça acompanham a mira,
+e a arma presa na mão aponta para onde o jogador mira. Há 6 variações de cor de uniforme. No nível **Batata** o
+jogo continua usando o personagem simples feito por código, que é bem mais leve.
+
+Personagens longe da câmera atualizam a animação com menos frequência, para economizar CPU.
+
+## Créditos
+- Modelo do soldado (`public/models/soldier.glb`): personagem "Vanguard" do Mixamo (Adobe), distribuído nos exemplos do [three.js](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf). O Mixamo permite usar seus personagens e animações em jogos; não redistribua o arquivo separado do jogo.
+- [three.js](https://threejs.org) r170 (licença MIT).
+
 ## Limitações deste protótipo
-- Gráficos low-poly gerados por código (sem modelos ou texturas de artistas).
+- Um único modelo humano (com variações de cor); cenário, armas e texturas são gerados por código.
+- O modelo não tem animações de agachar, pular, morrer ou mirar: essas poses são aproximadas girando ossos.
 - Sem veículos, granadas, esquadrões nem chat de voz.
 - Sem compensação de lag: o servidor confia na detecção de acerto do atirador (com validação básica).
 - Sem controles de toque para celular.
