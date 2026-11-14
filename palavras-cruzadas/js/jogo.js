@@ -1,4 +1,4 @@
-// Cruzadas do Saber — lógica do jogo, telas, loja e progresso.
+// Palavrário — lógica do jogo, telas, loja, contas e progresso.
 (function () {
   'use strict';
   const CATS = window.CATEGORIAS;
@@ -73,7 +73,7 @@
   }
   let S;
   try { S = JSON.parse(localStorage.getItem(CHAVE) || 'null'); } catch (e) { S = null; }
-  (function migrar() {
+  function migrarCampos() {
     const b = novoSave();
     if (!S) { S = b; return; }
     const versao = S.v || 1;
@@ -92,8 +92,68 @@
       S.v = 2;
       for (const k in S.aprendidas) S.vistas[k] = S.vistas[k] || S.aprendidas[k];
     }
-  })();
-  function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify(S)); } catch (e) { /* armazenamento indisponível */ } }
+  }
+  migrarCampos();
+  function salvar() {
+    S.ts = Date.now();
+    try { localStorage.setItem(CHAVE, JSON.stringify(S)); } catch (e) { /* armazenamento indisponível */ }
+    agendarSync();
+  }
+
+  // ================================================================ conta (login e senha) e progresso na nuvem
+  const CHAVE_CONTA = 'palavrario_conta';
+  let conta = null;
+  try { conta = JSON.parse(localStorage.getItem(CHAVE_CONTA) || 'null'); } catch (e) { conta = null; }
+  const temServidor = location.protocol.startsWith('http') && !/claude\.ai|claudeusercontent|github\.io/.test(location.hostname);
+  let syncTimer = null, syncStatus = '';
+  async function chamar(metodo, url, corpo) {
+    const r = await fetch(url, { method: metodo, headers: Object.assign({ 'content-type': 'application/json' }, conta ? { authorization: 'Bearer ' + conta.token } : {}), body: corpo ? JSON.stringify(corpo) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401 && conta && !url.endsWith('/login') && !url.endsWith('/cadastro')) { sairConta(true); }
+    if (!r.ok) throw new Error(j.erro || 'Erro de conexão');
+    return j;
+  }
+  function agendarSync() {
+    if (!conta || !temServidor) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(enviarProgresso, 2500);
+  }
+  async function enviarProgresso() {
+    if (!conta) return;
+    S.dono = conta.usuario;
+    try { await chamar('PUT', '/api/progresso', { progresso: S }); syncStatus = 'Sincronizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { syncStatus = 'Sem conexão — seu progresso fica salvo aqui e sobe depois.'; }
+  }
+  function usarProgresso(p) {
+    S = p; migrarCampos(); S.dono = conta ? conta.usuario : S.dono; localStorage.setItem(CHAVE, JSON.stringify(S)); aplicarTema();
+  }
+  const progressoVazio = (p) => !p || ((p.stats || {}).cruzadas || 0) === 0 && (p.xp || 0) === 0 && (p.nivel || 1) === 1 && Object.keys(p.aprendidas || {}).length === 0;
+  // Decide qual progresso vale ao conectar: nunca apaga progresso real sem perguntar.
+  function reconciliar(remoto, aoTerminar) {
+    const fim = () => { if (aoTerminar) aoTerminar(); };
+    if (!remoto || progressoVazio(remoto)) { enviarProgresso(); return fim(); }
+    if (progressoVazio(S)) { usarProgresso(remoto); toast('☁️ Progresso da sua conta carregado.'); return fim(); }
+    if (S.dono === conta.usuario) {
+      if ((remoto.ts || 0) > (S.ts || 0)) { usarProgresso(remoto); toast('☁️ Progresso atualizado com a sua conta.'); } else enviarProgresso();
+      return fim();
+    }
+    const r = remoto.stats || {};
+    confirmar('Qual progresso manter?', `Na conta: nível ${remoto.nivel}, ${r.cruzadas || 0} cruzadas. Neste aparelho: nível ${S.nivel}, ${S.stats.cruzadas} cruzadas.`,
+      () => { usarProgresso(remoto); toast('☁️ Progresso da conta carregado.'); fim(); }, 'Usar o da conta',
+      () => { enviarProgresso(); toast('Progresso deste aparelho salvo na conta.'); fim(); }, 'Usar o deste aparelho');
+  }
+  function sairConta(expirou) {
+    if (conta && !expirou) chamar('POST', '/api/sair').catch(() => {});
+    conta = null; localStorage.removeItem(CHAVE_CONTA); delete S.dono;
+    if (expirou) toast('Sua sessão expirou. Entre de novo para sincronizar.');
+  }
+  async function puxarDaNuvem() {
+    if (!conta || !temServidor) return;
+    try {
+      const r = await chamar('GET', '/api/progresso');
+      reconciliar(r.progresso, () => { if (telaAtual !== 'jogo') ir(telaAtual); });
+    } catch (e) { syncStatus = 'Sem conexão com o servidor agora.'; }
+  }
 
   function aplicarTema() {
     const t = TEMAS.find((x) => x.id === S.loja.tema) || TEMAS[0];
@@ -149,10 +209,10 @@
     d.style.left = r.left + r.width / 2 - 20 + 'px'; d.style.top = r.top - 10 + 'px';
     document.body.appendChild(d); setTimeout(() => d.remove(), 1000);
   }
-  function confirmar(titulo, texto, sim, rotulo = 'Confirmar') {
+  function confirmar(titulo, texto, sim, rotulo = 'Confirmar', nao = null, rotuloNao = 'Cancelar') {
     const m = document.createElement('div'); m.className = 'modal';
-    m.innerHTML = `<div class="janela"><h2 style="font-size:24px">${esc(titulo)}</h2><p style="text-align:center;font-weight:600">${esc(texto)}</p><div class="acoes"><button class="btn" data-a="nao">Cancelar</button><button class="btn pri" data-a="sim">${esc(rotulo)}</button></div></div>`;
-    m.onclick = (e) => { const a = e.target.dataset.a; if (a) { m.remove(); if (a === 'sim') sim(); } };
+    m.innerHTML = `<div class="janela"><h2 style="font-size:24px">${esc(titulo)}</h2><p style="text-align:center;font-weight:600">${esc(texto)}</p><div class="acoes"><button class="btn" data-a="nao">${esc(rotuloNao)}</button><button class="btn pri" data-a="sim">${esc(rotulo)}</button></div></div>`;
+    m.onclick = (e) => { const a = e.target.dataset.a; if (a) { m.remove(); if (a === 'sim') sim(); else if (nao) nao(); } };
     document.body.appendChild(m);
   }
 
@@ -287,14 +347,26 @@
       <div class="nivelbox"><div class="avatar">${S.loja.avatar}<span class="lv">${S.nivel}</span></div><div><small style="font-weight:800">Nível ${S.nivel} · ${S.xp}/${xpParaProximo(S.nivel)} XP</small><div class="xpbar"><i style="width:${(S.xp / xpParaProximo(S.nivel) * 100).toFixed(0)}%"></i></div></div></div>
       <button class="chip moedas" data-ir="loja" style="border:0">🪙 <span id="moedasTopo">${S.moedas}</span></button>
       <span class="chip" title="Dias seguidos jogando">🔥 ${S.dias.ultimo === hoje() || S.dias.ultimo === diasAtras(1) ? S.dias.seq : 0}${S.loja.itens.congelar ? ` · 🧊${S.loja.itens.congelar}` : ''}</span>
+      ${temServidor ? `<button class="chip" data-ir="conta" style="border:0">${conta ? '☁️ ' + esc(conta.usuario) : '👤 Entrar'}</button>` : ''}
     </div>`;
   }
   const TELAS = {};
+  const NAV = [['inicio', '🏠', 'Início'], ['mapa', '🗺️', 'Mapa'], ['loja', '🛍️', 'Loja'], ['conquistas', '🏆', 'Prêmios'], ['mais', '☰', 'Mais']];
+  const DONO_NAV = { mundo: 'mapa', livre: 'inicio', missoes: 'inicio', dicionario: 'mais', stats: 'mais', config: 'mais', conta: 'mais' };
+  function desenharNav() {
+    const el = document.getElementById('nav');
+    if (telaAtual === 'jogo') { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    const ativo = DONO_NAV[telaAtual] || telaAtual, cp = conquistasProntas();
+    el.innerHTML = NAV.map(([t, ic, nome]) => `<button data-nav="${t}" class="${t === ativo ? 'on' : ''}">${t === 'conquistas' && cp ? `<i class="badge">${cp}</i>` : ''}<span>${ic}</span>${nome}</button>`).join('');
+  }
+  document.getElementById('nav').addEventListener('click', (e) => { const b = e.target.closest('[data-nav]'); if (b) ir(b.dataset.nav); });
   function ir(t, arg) {
     pararCronometro();
     telaAtual = t;
     window.scrollTo(0, 0);
     TELAS[t](arg);
+    desenharNav();
   }
   $app.addEventListener('click', (e) => {
     const b = e.target.closest('[data-ir]');
@@ -318,29 +390,87 @@
     garantirMissoes();
     const prox = proximoNivel(), pc = catDe(prox.cat);
     const diarioFeito = !!S.diario.feitos[hoje()];
-    const mp = missoesProntas(), cp = conquistasProntas();
-    $app.innerHTML = `<div class="tela">${topo('Início', '')}
-      <div class="hero">${logoHTML()}<p>${window.TODAS_PALAVRAS.length} palavras para aprender em ${CATS.length} temas · ${totalAprendidas()} já no seu dicionário</p></div>
-      <div class="menu">
-        ${S.atual ? `<button class="card destaque" id="retomar"><div class="ic">⏯️</div><div><b>Continuar cruzada</b><small>${esc(S.atual.titulo)} — volte de onde parou</small></div></button>` : ''}
-        <button class="card ${S.atual ? '' : 'destaque'}" id="jogar" style="--cor:${pc.cor}"><div class="ic">▶️</div><div><b>Jogar campanha</b><small>Próximo: ${pc.icone} ${esc(pc.nome)} — nível ${prox.n}</small></div></button>
-        <button class="card" data-ir="mapa" style="--cor:#2f86c9"><div class="ic">🗺️</div><div><b>Mapa dos mundos</b><small>${CATS.length} mundos · ${totalNiveis()} níveis</small></div></button>
-        <button class="card" id="diario" style="--cor:#e2683c"><div class="ic">📅</div><div><b>Desafio diário</b><small>${diarioFeito ? '✅ Concluído hoje! Volte amanhã' : 'Cruzada do dia com prêmio extra'}</small></div></button>
-        <button class="card" data-ir="livre" style="--cor:#8e5bd1"><div class="ic">🎲</div><div><b>Jogo livre</b><small>Escolha o tema e o tamanho</small></div></button>
-        <button class="card" data-ir="loja" style="--cor:#e0a21b"><div class="ic">🛍️</div><div><b>Loja</b><small>Temas, avatares e pacotes de ajuda</small></div></button>
-        <button class="card" data-ir="missoes" style="--cor:#d64545">${mp ? `<span class="badge">${mp}</span>` : ''}<div class="ic">🎯</div><div><b>Missões diárias</b><small>${S.missoes.lista.filter((m) => m.prog >= m.alvo).length}/3 concluídas hoje</small></div></button>
-        <button class="card" data-ir="conquistas" style="--cor:#e2b13c">${cp ? `<span class="badge">${cp}</span>` : ''}<div class="ic">🏆</div><div><b>Conquistas</b><small>${Object.keys(S.conquistas).length}/${CONQUISTAS.length} desbloqueadas${cp ? ` · ${cp} para resgatar!` : ''}</small></div></button>
-        <button class="card" data-ir="dicionario" style="--cor:#1f9d55"><div class="ic">📚</div><div><b>Meu dicionário</b><small>${totalAprendidas()} palavras aprendidas</small></div></button>
-        <button class="card" data-ir="stats" style="--cor:#13a3a3"><div class="ic">📊</div><div><b>Estatísticas</b><small>Seu desempenho</small></div></button>
-        <button class="card" data-ir="config" style="--cor:#66758a"><div class="ic">⚙️</div><div><b>Configurações</b><small>Som, ajudas, teclado</small></div></button>
+    const mp = missoesProntas();
+    const apr = totalAprendidas(), tot = window.TODAS_PALAVRAS.length;
+    $app.innerHTML = `<div class="tela">${topo('', '')}
+      <div class="marca"><img src="logo.svg" alt=""><div><h1>Palavr<span>ário</span></h1><small>CRUZADAS DO SABER · ${tot} PALAVRAS</small></div></div>
+      <div class="painelinicio">
+        ${S.atual
+          ? `<button class="jogar" id="retomar"><div class="play">⏯</div><div><b>Continuar</b><small>${esc(S.atual.titulo)}</small></div></button>`
+          : `<button class="jogar" id="jogar"><div class="play">▶</div><div><b>Jogar</b><small>${pc.icone} ${esc(pc.nome)} · nível ${prox.n}</small></div></button>`}
+        <div class="atalhos">
+          <button class="atalho" id="diario"><span class="ic">📅</span>Diário<small>${diarioFeito ? '✅ feito' : '+50 🪙'}</small></button>
+          <button class="atalho" data-ir="livre"><span class="ic">🎲</span>Livre<small>escolha o tema</small></button>
+          <button class="atalho" data-ir="missoes">${mp ? `<span class="badge">${mp}</span>` : ''}<span class="ic">🎯</span>Missões<small>${S.missoes.lista.filter((m) => m.prog >= m.alvo).length}/3 hoje</small></button>
+        </div>
+        <div class="resumo"><div>📚 ${apr} de ${tot} palavras aprendidas</div><div class="prog"><i style="width:${(apr / tot * 100).toFixed(1)}%"></i></div></div>
+        ${S.atual ? `<button class="atalho" id="jogar" style="grid-template-columns:auto 1fr;justify-items:start;padding:10px 14px"><span class="ic">▶️</span>Nova cruzada da campanha: ${pc.icone} ${esc(pc.nome)} · nível ${prox.n}</button>` : ''}
       </div></div>`;
     document.getElementById('jogar').onclick = () => iniciarCampanha(prox.cat, prox.n);
     document.getElementById('diario').onclick = iniciarDiario;
     const r = document.getElementById('retomar'); if (r) r.onclick = retomar;
   };
 
+  TELAS.mais = function () {
+    const it = (t, ic, nome, desc) => `<button class="item" data-ir="${t}" style="width:100%;border:0;text-align:left"><div class="ic">${ic}</div><div class="tx"><b>${nome}</b><small>${desc}</small></div><span style="font-weight:900;color:var(--muted)">›</span></button>`;
+    $app.innerHTML = `<div class="tela">${topo('Mais', '')}
+      ${it('missoes', '🎯', 'Missões diárias', `${S.missoes.lista.filter((m) => m.prog >= m.alvo).length}/3 concluídas hoje`)}
+      ${it('dicionario', '📚', 'Meu dicionário', `${totalAprendidas()} palavras aprendidas`)}
+      ${it('stats', '📊', 'Estatísticas', 'Seu desempenho')}
+      ${temServidor ? it('conta', '👤', 'Minha conta', conta ? `Conectado como ${esc(conta.usuario)}` : 'Crie login e senha para salvar na nuvem') : ''}
+      ${it('config', '⚙️', 'Configurações', 'Som, ajudas, teclado')}
+    </div>`;
+  };
+
+  TELAS.conta = function (aba) {
+    aba = aba || 'entrar';
+    if (!temServidor) { $app.innerHTML = `<div class="tela">${topo('Minha conta', 'mais')}<div class="formconta"><b>Login disponível na versão online do jogo.</b><small>Aqui o progresso fica salvo só neste navegador.</small></div></div>`; return; }
+    if (conta) {
+      $app.innerHTML = `<div class="tela">${topo('Minha conta', 'mais')}
+        <div class="formconta" style="text-align:center">
+          <div style="font-size:54px">${S.loja.avatar}</div>
+          <b style="font-size:22px">${esc(conta.usuario)}</b>
+          <small style="color:var(--muted);font-weight:700">Nível ${S.nivel} · ${totalAprendidas()} palavras · ${S.moedas} 🪙</small>
+          <small style="color:var(--muted);font-weight:700" id="syncst">${esc(syncStatus || 'Seu progresso é salvo na nuvem automaticamente.')}</small>
+          <button class="btn pri" id="sync">☁️ Sincronizar agora</button>
+          <button class="btn" id="sair">Sair da conta</button>
+        </div></div>`;
+      document.getElementById('sync').onclick = async () => { await enviarProgresso(); document.getElementById('syncst').textContent = syncStatus; toast(syncStatus); };
+      document.getElementById('sair').onclick = () => confirmar('Sair da conta?', 'O progresso continua neste aparelho e na sua conta.', () => { sairConta(); ir('conta'); toast('Você saiu da conta.'); }, 'Sair');
+      return;
+    }
+    const cad = aba === 'criar';
+    $app.innerHTML = `<div class="tela">${topo('Minha conta', 'mais')}
+      <div class="abas" style="justify-content:center"><button class="btn ${!cad ? 'on' : ''}" data-aba="entrar">Entrar</button><button class="btn ${cad ? 'on' : ''}" data-aba="criar">Criar conta</button></div>
+      <form class="formconta" id="fconta" autocomplete="on">
+        <div style="text-align:center"><img src="logo.svg" alt="" style="width:56px"><br><b>${cad ? 'Crie sua conta e jogue em qualquer aparelho' : 'Entre para continuar seu progresso'}</b></div>
+        <label for="cu">Usuário</label><input id="cu" name="username" autocomplete="username" autocapitalize="none" placeholder="ex.: maria.silva" maxlength="20" required>
+        <label for="cs">Senha</label><input id="cs" name="password" type="password" autocomplete="${cad ? 'new-password' : 'current-password'}" minlength="6" required placeholder="mínimo 6 caracteres">
+        ${cad ? '<label for="cs2">Confirme a senha</label><input id="cs2" type="password" autocomplete="new-password" minlength="6" required>' : ''}
+        <div class="erro" id="cerro"></div>
+        <button class="btn pri" type="submit">${cad ? 'Criar conta' : 'Entrar'}</button>
+        <small style="color:var(--muted);font-weight:700;text-align:center">A senha é guardada de forma protegida (criptografada) no servidor.</small>
+      </form></div>`;
+    $app.querySelectorAll('[data-aba]').forEach((b) => (b.onclick = () => TELAS.conta(b.dataset.aba)));
+    document.getElementById('fconta').onsubmit = async (e) => {
+      e.preventDefault();
+      const erro = document.getElementById('cerro');
+      const usuario = document.getElementById('cu').value.trim().toLowerCase(), senha = document.getElementById('cs').value;
+      if (cad && senha !== document.getElementById('cs2').value) { erro.textContent = 'As senhas não conferem.'; return; }
+      erro.textContent = 'Aguarde…';
+      try {
+        const r = await chamar('POST', cad ? '/api/cadastro' : '/api/login', { usuario, senha });
+        conta = { token: r.token, usuario: r.usuario };
+        localStorage.setItem(CHAVE_CONTA, JSON.stringify(conta));
+        sfx.moeda();
+        if (cad) { await enviarProgresso(); toast('Conta criada! Seu progresso agora fica salvo na nuvem.'); ir('inicio'); }
+        else { toast(`Bem-vindo, ${r.usuario}!`); reconciliar(r.progresso, () => ir('inicio')); }
+      } catch (er) { erro.textContent = er.message; sfx.erro(); }
+    };
+  };
+
   TELAS.mapa = function () {
-    $app.innerHTML = `<div class="tela">${topo('Mapa dos mundos')}
+    $app.innerHTML = `<div class="tela">${topo('Mapa dos mundos', '')}
       <p style="color:var(--muted);margin:0 4px 14px;font-weight:700">Complete 60% dos níveis de um mundo para liberar o próximo.</p>
       <div class="mundos">${CATS.map((c, i) => {
         const lib = mundoLiberado(i), feitos = Object.keys(S.progresso[c.id] || {}).length, tot = niveisDe(c.id);
@@ -404,7 +534,7 @@
         <b>${esc(it.nome)}</b><small>${esc(it.desc)}</small><span class="chip">Você tem: ${L.itens[it.id]}</span>
         <button class="btn amar" data-comp-item="${it.id}">🪙 ${it.preco}</button></div>`).join('');
     }
-    $app.innerHTML = `<div class="tela">${topo('🛍️ Loja')}
+    $app.innerHTML = `<div class="tela">${topo('🛍️ Loja', '')}
       <div class="abas">${[['temas', '🎨 Temas'], ['avatares', '🎭 Avatares'], ['itens', '🎒 Ajudas e itens']].map(([k, t]) => `<button class="btn ${aba === k ? 'on' : ''}" data-aba="${k}">${t}</button>`).join('')}</div>
       <div class="loja">${corpo}</div>
       <p style="color:var(--muted);margin:16px 4px;font-weight:700">Ganhe moedas completando cruzadas, missões diárias, conquistas e subindo de nível.</p></div>`;
@@ -446,7 +576,7 @@
   TELAS.conquistas = function () {
     const prontas = conquistasProntas();
     const ord = CONQUISTAS.slice().sort((a, b) => (S.conquistas[b.id] && !S.conqResg[b.id] ? 1 : 0) - (S.conquistas[a.id] && !S.conqResg[a.id] ? 1 : 0));
-    $app.innerHTML = `<div class="tela">${topo(`🏆 Conquistas (${Object.keys(S.conquistas).length}/${CONQUISTAS.length})`)}
+    $app.innerHTML = `<div class="tela">${topo(`🏆 Conquistas (${Object.keys(S.conquistas).length}/${CONQUISTAS.length})`, '')}
       ${prontas > 1 ? `<div class="acoes" style="margin-bottom:12px"><button class="btn amar" id="todas">🎁 Resgatar todas (${prontas})</button></div>` : ''}
       ${ord.map((c) => {
         const des = !!S.conquistas[c.id], res = !!S.conqResg[c.id];
@@ -555,30 +685,34 @@
 
   function rotuloAjuda(tipo, ic, nome) {
     const n = S.loja.itens[tipo];
-    return `${ic} ${nome} (${n > 0 ? '×' + n : CUSTO[tipo] + '🪙'})`;
+    return `${ic}<span class="txt"> ${nome}</span> ${n > 0 ? '×' + n : CUSTO[tipo] + '🪙'}`;
   }
   function atualizarBotoesAjuda() {
     const b1 = document.getElementById('hLetra'); if (!b1) return;
-    b1.textContent = rotuloAjuda('letra', '💡', 'Letra');
-    document.getElementById('hPalavra').textContent = rotuloAjuda('palavra', '📖', 'Palavra');
-    document.getElementById('hVer').textContent = rotuloAjuda('verificar', '🔍', 'Verificar');
+    b1.innerHTML = rotuloAjuda('letra', '💡', 'Letra');
+    document.getElementById('hPalavra').innerHTML = rotuloAjuda('palavra', '📖', 'Palavra');
+    document.getElementById('hVer').innerHTML = rotuloAjuda('verificar', '🔍', 'Verificar');
     const m = document.getElementById('moedasTopo'); if (m) m.textContent = S.moedas;
   }
 
   function abrirJogo() {
     telaAtual = 'jogo';
     const cz = J.cz;
-    const hz = cz.palavras.filter((p) => !p.dir), vt = cz.palavras.filter((p) => p.dir);
-    const li = (p) => `<li data-p="${p.id}"><b>${p.num}</b><span>${esc(p.dica)} <small style="color:var(--muted)">(${p.w.length})</small></span></li>`;
-    $app.innerHTML = `<div class="tela" style="--mundo:${corDoJogo()}">${topo(esc(J.titulo), J.modo === 'campanha' ? 'mundo' : 'inicio', J.modo === 'campanha' ? J.cat : '')}
+    $app.innerHTML = `<div class="tela modojogo" style="--mundo:${corDoJogo()}">
+      <div class="barrajogo">
+        <button class="voltar" id="sairjogo" aria-label="Voltar">←</button>
+        <div class="tit">${esc(J.titulo)}</div>
+        <span class="chip">⏱️ <span id="tempo">${fmtTempo(J.tempo)}</span></span>
+        <span class="chip opc">✅ <span id="cont">0</span>/${cz.palavras.length}</span>
+        <span class="chip moedas">🪙 <span id="moedasTopo">${S.moedas}</span></span>
+      </div>
       <div class="jogo">
         <div class="painel">
           <div class="barraprog"><i id="barra" style="width:0%"></i></div>
-          <div class="dicaatual"><button class="seta" id="ant">‹</button><div class="t" id="dica">Toque em uma casa para começar</div><button class="seta" id="prox">›</button></div>
+          <div class="dicaatual"><button class="seta" id="ant">‹</button><div class="t" id="dica"></div><button class="seta" id="prox">›</button></div>
           <div class="gradebox"><div class="grade" id="grade" style="grid-template-columns:repeat(${cz.largura}, var(--cel))"></div></div>
-          <div class="acoes">
-            <span class="chip">⏱️ <span id="tempo">${fmtTempo(J.tempo)}</span></span>
-            <span class="chip">✅ <span id="cont">0</span>/${cz.palavras.length}</span>
+          <div class="ajudas">
+            <button class="btn so-celular" id="verdicas">📋</button>
             <button class="btn amar" id="hLetra"></button>
             <button class="btn amar" id="hPalavra"></button>
             <button class="btn" id="hVer"></button>
@@ -587,11 +721,10 @@
             ${['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map((r, i) => `<div class="linha">${[...r].map((k) => `<button data-k="${k}">${k}</button>`).join('')}${i === 2 ? '<button class="larga" data-k="⌫">⌫</button>' : ''}</div>`).join('')}
           </div>
         </div>
-        <div class="painel listas">
-          <h3>➡️ Horizontais</h3><ul class="lista">${hz.map(li).join('')}</ul>
-          <h3>⬇️ Verticais</h3><ul class="lista">${vt.map(li).join('')}</ul>
-        </div>
+        <div class="painel listas lateral" id="listas">${listasHTML()}</div>
       </div></div>`;
+    document.getElementById('sairjogo').onclick = () => { guardarAtual(); ir(J.modo === 'campanha' ? 'mundo' : 'inicio', J.modo === 'campanha' ? J.cat : undefined); };
+    document.getElementById('verdicas').onclick = abrirGaveta;
     const grade = document.getElementById('grade');
     const nums = {};
     for (const p of cz.palavras) nums[p.l + ',' + p.c] = p.num;
@@ -601,7 +734,7 @@
     }
     grade.innerHTML = html;
     grade.onclick = (e) => { const d = e.target.closest('.c[data-l]'); if (d) clicarCelula(+d.dataset.l, +d.dataset.c); };
-    $app.querySelectorAll('.lista li').forEach((el) => (el.onclick = () => selecionarPalavra(J.cz.palavras[+el.dataset.p])));
+    ligarListas(document.getElementById('listas'));
     document.getElementById('ant').onclick = () => irPalavra(-1);
     document.getElementById('prox').onclick = () => irPalavra(1);
     document.getElementById('hLetra').onclick = ajudaLetra;
@@ -615,11 +748,30 @@
     cron = setInterval(() => { if (document.hidden) return; J.tempo++; const t = document.getElementById('tempo'); if (t) t.textContent = fmtTempo(J.tempo); if (J.tempo % 10 === 0) guardarAtual(); }, 1000);
   }
 
+  function listasHTML() {
+    const li = (p) => `<li data-p="${p.id}"><b>${p.num}</b><span>${esc(p.dica)} <small style="color:var(--muted)">(${p.w.length})</small></span></li>`;
+    return `<h3>➡️ Horizontais</h3><ul class="lista">${J.cz.palavras.filter((p) => !p.dir).map(li).join('')}</ul>
+      <h3>⬇️ Verticais</h3><ul class="lista">${J.cz.palavras.filter((p) => p.dir).map(li).join('')}</ul>`;
+  }
+  function ligarListas(el) { el.querySelectorAll('.lista li').forEach((x) => (x.onclick = () => { selecionarPalavra(J.cz.palavras[+x.dataset.p]); fecharGaveta(); })); }
+  function abrirGaveta() {
+    fecharGaveta();
+    const g = document.createElement('div'); g.className = 'gaveta'; g.id = 'gaveta';
+    g.innerHTML = `<div class="folha listas" style="--mundo:${corDoJogo()}"><div style="display:flex;justify-content:space-between;align-items:center"><b>📋 Todas as dicas</b><button class="btn" id="fechagav">✕</button></div>${listasHTML()}</div>`;
+    g.onclick = (e) => { if (e.target === g) fecharGaveta(); };
+    document.body.appendChild(g);
+    document.getElementById('fechagav').onclick = fecharGaveta;
+    ligarListas(g); redesenhar();
+  }
+  function fecharGaveta() { const g = document.getElementById('gaveta'); if (g) g.remove(); }
+
   function ajustarTamanho() {
     const box = document.querySelector('.gradebox'); if (!box || !J) return;
-    const larg = Math.min(box.clientWidth, document.documentElement.clientWidth - 48) - 8;
-    const alt = Math.max(260, innerHeight - (tecladoVisivel() ? 380 : 270));
-    const t = Math.max(22, Math.min(46, Math.floor(Math.min(larg / J.cz.largura, alt / J.cz.altura)) - 3));
+    const larg = Math.min(box.clientWidth, document.documentElement.clientWidth - 40) - 8;
+    const teclado = tecladoVisivel() ? document.getElementById('teclado').offsetHeight + 12 : 0;
+    const usado = box.getBoundingClientRect().top + window.scrollY + 70 + teclado;   // barra + dica acima; ajudas + teclado abaixo
+    const alt = Math.max(200, innerHeight - usado);
+    const t = Math.max(20, Math.min(46, Math.floor(Math.min(larg / J.cz.largura, alt / J.cz.altura)) - 3));
     document.documentElement.style.setProperty('--cel', t + 'px');
   }
   addEventListener('resize', () => { if (telaAtual === 'jogo') ajustarTamanho(); });
@@ -757,12 +909,12 @@
       el.classList.toggle('rev', !!J.rev[k] && !ok[k]);
       el.classList.toggle('erro', !!(mostrarErros && v && v !== J.cz.grade[l][c]));
     });
-    $app.querySelectorAll('.lista li').forEach((el) => {
+    document.querySelectorAll('.lista li').forEach((el) => {
       const id = +el.dataset.p;
       el.classList.toggle('feita', !!J.resolvidas[id]);
       el.classList.toggle('atual', !!atual && atual.id === id);
     });
-    const li = atual && $app.querySelector(`.lista li[data-p="${atual.id}"]`);
+    const li = atual && document.querySelector(`#listas .lista li[data-p="${atual.id}"]`);
     if (li && matchMedia('(min-width: 901px)').matches) li.scrollIntoView({ block: 'nearest' });
     document.getElementById('dica').innerHTML = atual ? `<b>${atual.num} ${atual.dir ? '⬇️ Vertical' : '➡️ Horizontal'}</b> · ${esc(atual.dica)} <small style="color:var(--muted)">(${atual.w.length} letras)</small>` : '';
     const n = Object.keys(J.resolvidas).length;
@@ -801,6 +953,7 @@
   }
   function concluir() {
     if (J.concluida) return;
+    fecharGaveta();
     J.concluida = true; pararCronometro(); S.atual = null;
     const est = J.dicas === 0 ? 3 : J.dicas <= 3 ? 2 : 1;
     const xp = 50 + est * 25 + (J.modo === 'diario' ? 50 : 0);
@@ -852,4 +1005,5 @@
   window.__CRUZ = { get S() { return S; }, get J() { return J; }, digitar, ir, novoJogo, candidatas };
   garantirMissoes();
   ir('inicio');
+  puxarDaNuvem();
 })();

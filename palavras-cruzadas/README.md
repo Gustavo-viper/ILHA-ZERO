@@ -1,6 +1,21 @@
-# Cruzadas do Saber
+# Palavrário — cruzadas do saber
 
 Palavras cruzadas educativas em português, para navegador. Funciona em qualquer computador ou celular e não precisa de instalação nem de internet.
+
+## Versão online (com conta)
+`server.js` serve o jogo e guarda **contas com login e senha**, além do progresso de cada jogador na nuvem. O servidor não tem nenhuma dependência externa.
+
+```bash
+npm start            # porta 8080 (ou a variável PORT)
+```
+- `DATA_DIR`: pasta onde ficam as contas (`palavrario.json`). No Railway, aponte para um volume para não perder os dados a cada deploy.
+- As senhas são guardadas com hash **scrypt** e sal, e as sessões com tokens aleatórios, também guardados apenas como hash.
+- O progresso sincroniza sozinho poucos segundos depois de cada mudança.
+  - Ao entrar em outro aparelho, um aparelho zerado recebe o progresso da conta.
+  - Se o aparelho já tiver progresso próprio, o jogo pergunta qual manter.
+- Login e cadastro têm limite de tentativas por IP.
+
+Sem o servidor (abrindo o `index.html` direto), o jogo funciona normalmente e salva só no navegador.
 
 ## Como jogar
 - **Computador:** dê dois cliques em `index.html`.

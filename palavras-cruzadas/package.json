@@ -1,0 +1,9 @@
+{
+  "name": "palavrario",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Palavrário — palavras cruzadas educativas com contas e progresso na nuvem",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
