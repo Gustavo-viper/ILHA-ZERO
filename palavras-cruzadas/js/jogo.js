@@ -145,7 +145,7 @@
   function sairConta(expirou) {
     if (conta && !expirou) chamar('POST', '/api/sair').catch(() => {});
     conta = null; localStorage.removeItem(CHAVE_CONTA); delete S.dono;
-    if (expirou) toast('Sua sessão expirou. Entre de novo para sincronizar.');
+    if (expirou) { toast('Sua sessão expirou. Entre de novo.'); if (telaAtual !== 'boasvindas') { guardarAtual(); ir('boasvindas'); } }
   }
   async function puxarDaNuvem() {
     if (!conta || !temServidor) return;
@@ -355,13 +355,15 @@
   const DONO_NAV = { mundo: 'mapa', livre: 'inicio', missoes: 'inicio', dicionario: 'mais', stats: 'mais', config: 'mais', conta: 'mais' };
   function desenharNav() {
     const el = document.getElementById('nav');
-    if (telaAtual === 'jogo') { el.classList.add('hidden'); return; }
+    if (telaAtual === 'jogo' || telaAtual === 'boasvindas') { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
     const ativo = DONO_NAV[telaAtual] || telaAtual, cp = conquistasProntas();
     el.innerHTML = NAV.map(([t, ic, nome]) => `<button data-nav="${t}" class="${t === ativo ? 'on' : ''}">${t === 'conquistas' && cp ? `<i class="badge">${cp}</i>` : ''}<span>${ic}</span>${nome}</button>`).join('');
   }
   document.getElementById('nav').addEventListener('click', (e) => { const b = e.target.closest('[data-nav]'); if (b) ir(b.dataset.nav); });
+  const precisaEntrar = () => temServidor && !conta;
   function ir(t, arg) {
+    if (precisaEntrar() && t !== 'boasvindas') t = 'boasvindas';
     pararCronometro();
     telaAtual = t;
     window.scrollTo(0, 0);
@@ -436,14 +438,23 @@
           <button class="btn" id="sair">Sair da conta</button>
         </div></div>`;
       document.getElementById('sync').onclick = async () => { await enviarProgresso(); document.getElementById('syncst').textContent = syncStatus; toast(syncStatus); };
-      document.getElementById('sair').onclick = () => confirmar('Sair da conta?', 'O progresso continua neste aparelho e na sua conta.', () => { sairConta(); ir('conta'); toast('Você saiu da conta.'); }, 'Sair');
+      document.getElementById('sair').onclick = () => confirmar('Sair da conta?', 'O progresso continua neste aparelho e na sua conta.', () => { sairConta(); ir('boasvindas'); toast('Você saiu da conta.'); }, 'Sair');
       return;
     }
+    formularioConta(aba, false);
+  };
+
+  // Formulário de entrar/criar conta. entrada = true: é a primeira tela do jogo (tela cheia, sem menu).
+  function formularioConta(aba, entrada) {
     const cad = aba === 'criar';
-    $app.innerHTML = `<div class="tela">${topo('Minha conta', 'mais')}
+    const cabecalho = entrada
+      ? `<div class="marca" style="margin:18px 0 6px"><img src="logo.svg" alt=""><div><h1>Palavr<span>ário</span></h1><small>CRUZADAS DO SABER · ${window.TODAS_PALAVRAS.length} PALAVRAS</small></div></div>
+         <p style="text-align:center;color:var(--muted);font-weight:800;margin:0 0 12px">Aprenda brincando: campanha, desafio diário, missões e conquistas.</p>`
+      : topo('Minha conta', 'mais');
+    $app.innerHTML = `<div class="tela">${cabecalho}
       <div class="abas" style="justify-content:center"><button class="btn ${!cad ? 'on' : ''}" data-aba="entrar">Entrar</button><button class="btn ${cad ? 'on' : ''}" data-aba="criar">Criar conta</button></div>
       <form class="formconta" id="fconta" autocomplete="on">
-        <div style="text-align:center"><img src="logo.svg" alt="" style="width:56px"><br><b>${cad ? 'Crie sua conta e jogue em qualquer aparelho' : 'Entre para continuar seu progresso'}</b></div>
+        <div style="text-align:center">${entrada ? '' : '<img src="logo.svg" alt="" style="width:56px"><br>'}<b>${cad ? 'Crie sua conta e jogue em qualquer aparelho' : 'Entre para continuar seu progresso'}</b></div>
         <label for="cu">Usuário</label><input id="cu" name="username" autocomplete="username" autocapitalize="none" placeholder="ex.: maria.silva" maxlength="20" required>
         <label for="cs">Senha</label><input id="cs" name="password" type="password" autocomplete="${cad ? 'new-password' : 'current-password'}" minlength="6" required placeholder="mínimo 6 caracteres">
         ${cad ? '<label for="cs2">Confirme a senha</label><input id="cs2" type="password" autocomplete="new-password" minlength="6" required>' : ''}
@@ -451,7 +462,7 @@
         <button class="btn pri" type="submit">${cad ? 'Criar conta' : 'Entrar'}</button>
         <small style="color:var(--muted);font-weight:700;text-align:center">A senha é guardada de forma protegida (criptografada) no servidor.</small>
       </form></div>`;
-    $app.querySelectorAll('[data-aba]').forEach((b) => (b.onclick = () => TELAS.conta(b.dataset.aba)));
+    $app.querySelectorAll('[data-aba]').forEach((b) => (b.onclick = () => formularioConta(b.dataset.aba, entrada)));
     document.getElementById('fconta').onsubmit = async (e) => {
       e.preventDefault();
       const erro = document.getElementById('cerro');
@@ -462,11 +473,18 @@
         const r = await chamar('POST', cad ? '/api/cadastro' : '/api/login', { usuario, senha });
         conta = { token: r.token, usuario: r.usuario };
         localStorage.setItem(CHAVE_CONTA, JSON.stringify(conta));
+        localStorage.setItem('palavrario_ja_entrou', '1');
         sfx.moeda();
         if (cad) { await enviarProgresso(); toast('Conta criada! Seu progresso agora fica salvo na nuvem.'); ir('inicio'); }
         else { toast(`Bem-vindo, ${r.usuario}!`); reconciliar(r.progresso, () => ir('inicio')); }
       } catch (er) { erro.textContent = er.message; sfx.erro(); }
     };
+    if (entrada) document.getElementById('cu').focus();
+  }
+
+  // Primeira tela da versão online: entrar ou criar conta
+  TELAS.boasvindas = function (aba) {
+    formularioConta(aba || (localStorage.getItem('palavrario_ja_entrou') ? 'entrar' : 'criar'), true);
   };
 
   TELAS.mapa = function () {
