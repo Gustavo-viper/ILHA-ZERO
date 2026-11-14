@@ -698,7 +698,14 @@
   const palavrasEm = (l, c) => J.cz.palavras.filter((p) => p.dir ? (p.c === c && l >= p.l && l < p.l + p.w.length) : (p.l === l && c >= p.c && c < p.c + p.w.length));
   const celulas = (p) => Array.from({ length: p.w.length }, (_, k) => [p.l + (p.dir ? k : 0), p.c + (p.dir ? 0 : k)]);
   const palavraAtual = () => { if (!J.sel) return null; const ps = palavrasEm(J.sel.l, J.sel.c); return ps.find((p) => p.dir === J.sel.dir) || ps[0]; };
-  const tecladoVisivel = () => S.cfg.teclado === 'sempre' || (S.cfg.teclado === 'auto' && matchMedia('(pointer: coarse)').matches);
+  const temToque = () => ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse), (any-pointer: coarse), (hover: none)').matches || Math.min(innerWidth, screen.width || innerWidth) <= 900;
+  const tecladoVisivel = () => S.cfg.teclado === 'sempre' || (S.cfg.teclado !== 'nunca' && temToque());
+  function alternarTeclado() {
+    S.cfg.teclado = tecladoVisivel() ? 'nunca' : 'sempre'; salvar();
+    const t = document.getElementById('teclado'); if (t) t.classList.toggle('hidden', !tecladoVisivel());
+    const b = document.getElementById('hTecl'); if (b) b.classList.toggle('ativo', tecladoVisivel());
+    ajustarTamanho(); redesenhar();
+  }
   const corDoJogo = () => (J.cat && J.cat !== 'todas' ? catDe(J.cat).cor : 'var(--pri)');
 
   function rotuloAjuda(tipo, ic, nome) {
@@ -714,7 +721,7 @@
   }
 
   function abrirJogo() {
-    telaAtual = 'jogo';
+    telaAtual = 'jogo'; desenharNav(); window.scrollTo(0, 0);
     const cz = J.cz;
     $app.innerHTML = `<div class="tela modojogo" style="--mundo:${corDoJogo()}">
       <div class="barrajogo">
@@ -734,6 +741,7 @@
             <button class="btn amar" id="hLetra"></button>
             <button class="btn amar" id="hPalavra"></button>
             <button class="btn" id="hVer"></button>
+            <button class="btn ${tecladoVisivel() ? 'ativo' : ''}" id="hTecl" title="Mostrar ou esconder o teclado">⌨️</button>
           </div>
           <div class="teclado ${tecladoVisivel() ? '' : 'hidden'}" id="teclado">
             ${['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map((r, i) => `<div class="linha">${[...r].map((k) => `<button data-k="${k}">${k}</button>`).join('')}${i === 2 ? '<button class="larga" data-k="⌫">⌫</button>' : ''}</div>`).join('')}
@@ -758,6 +766,7 @@
     document.getElementById('hLetra').onclick = ajudaLetra;
     document.getElementById('hPalavra').onclick = ajudaPalavra;
     document.getElementById('hVer').onclick = ajudaVerificar;
+    document.getElementById('hTecl').onclick = alternarTeclado;
     document.getElementById('teclado').onclick = (e) => { const k = e.target.closest('[data-k]'); if (k) { k.dataset.k === '⌫' ? apagar() : digitar(k.dataset.k); } };
     atualizarBotoesAjuda();
     ajustarTamanho();
@@ -786,8 +795,13 @@
   function ajustarTamanho() {
     const box = document.querySelector('.gradebox'); if (!box || !J) return;
     const larg = Math.min(box.clientWidth, document.documentElement.clientWidth - 40) - 8;
-    const teclado = tecladoVisivel() ? document.getElementById('teclado').offsetHeight + 12 : 0;
-    const usado = box.getBoundingClientRect().top + window.scrollY + 70 + teclado;   // barra + dica acima; ajudas + teclado abaixo
+    const tec = document.getElementById('teclado');
+    const fixo = tec && getComputedStyle(tec).position === 'fixed';
+    const altTec = tecladoVisivel() && tec ? tec.offsetHeight : 0;
+    document.documentElement.style.setProperty('--altTecl', (fixo ? altTec + 8 : 0) + 'px');
+    const ajudas = document.querySelector('.ajudas');
+    const abaixo = (ajudas ? ajudas.offsetHeight + 20 : 70) + altTec + (fixo ? 8 : 12);
+    const usado = box.getBoundingClientRect().top + window.scrollY + abaixo;   // barra + dica acima; ajudas + teclado abaixo
     const alt = Math.max(200, innerHeight - usado);
     const t = Math.max(20, Math.min(46, Math.floor(Math.min(larg / J.cz.largura, alt / J.cz.altura)) - 3));
     document.documentElement.style.setProperty('--cel', t + 'px');
