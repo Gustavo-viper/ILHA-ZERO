@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#11151c">
+  <meta name="description" content="Conserte carros de clientes, prepare o seu e vença na arrancada. Funciona offline.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Oficina Turbo">
+  <title>Oficina Turbo</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="topo">
+    <div class="marca">🔧 Oficina <b>Turbo</b></div>
+    <div class="hud">
+      <span id="hud-dinheiro" title="Dinheiro">R$ 0</span>
+      <span id="hud-rep" title="Reputação">★ 0</span>
+      <span id="hud-dia" title="Dia e hora">Dia 1 · 08:00</span>
+      <button id="btn-menu" class="icone" aria-label="Menu">☰</button>
+    </div>
+  </header>
+
+  <main id="tela"></main>
+
+  <nav id="abas">
+    <button data-aba="oficina" class="ativa"><span>🔧</span>Oficina</button>
+    <button data-aba="garagem"><span>🚗</span>Garagem</button>
+    <button data-aba="tuning"><span>📈</span>Tuning</button>
+    <button data-aba="corrida"><span>🏁</span>Arrancada</button>
+    <button data-aba="loja"><span>🛒</span>Loja</button>
+  </nav>
+
+  <div id="modal" class="oculto"><div class="caixa" id="modal-caixa"></div></div>
+  <div id="aviso" class="oculto"></div>
+
+  <noscript>Este jogo precisa de JavaScript.</noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
