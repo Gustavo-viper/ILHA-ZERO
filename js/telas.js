@@ -1,11 +1,12 @@
 // Telas: Oficina, Garagem, Tuning (com dinamômetro), Arrancada (lista de rivais) e Loja.
 import { PECAS, LISTA_PECAS, UPGRADES, LISTA_UPGRADES, EQUIPAMENTOS, RIVAIS, CORES, TURBOS } from './data.js';
-import { S, salvar, carroAtivo, precoPeca, tempoPeca, precoUpgrade, valorCarro, inspecionar, diagnosticar, podeTrocar,
-  aplicarTroca, avaliarEntrega, entregar, encerrarDia, comprarFerroVelho, venderCarro, comprarUpgrade, aplicarDetonacao,
+import { S, salvar, carroAtivo, precoPeca, tempoPeca, precoUpgrade, valorCarro,   aplicarTroca, avaliarEntrega, entregar, encerrarDia, comprarFerroVelho, venderCarro, comprarUpgrade, aplicarDetonacao,
   custoDiario, novoCarro, INICIO_DIA, FIM_DIA } from './estado.js';
 import { modelo, specs, curva, simularTempo, mapaPadrao, clamp } from './fisica.js';
 import { desenharVitrine } from './desenho.js';
-import { $, dinheiro, hora, esc, barra, estrelas, aviso, abrirModal, fecharModal, confirmar, minigameAperto, rotuloQualidade } from './ui.js';
+import { fotografar } from './carro3d.js';
+import { abrirOficina3D } from './oficina3d.js';
+import { $, dinheiro, hora, esc, barra, estrelas, aviso, abrirModal, fecharModal, confirmar } from './ui.js';
 import { dinheiro as somDinheiro, erro, motorLigar, motorRpm, motorDesligar } from './som.js';
 import { iniciarCorrida } from './corrida.js';
 
@@ -17,7 +18,7 @@ function desenharVitrines(el) {
   el.querySelectorAll('canvas[data-carro]').forEach(cv => {
     const id = cv.dataset.carro;
     const c = S.carros.find(x => x.uid === id) || S.servicos.find(s => s.carro.uid === id)?.carro || S.ferroVelho.find(o => o.carro.uid === id)?.carro;
-    if (c) desenharVitrine(cv, c);
+    if (c && !fotografar(cv, c)) desenharVitrine(cv, c);
   });
 }
 const media = c => Math.round(LISTA_PECAS.reduce((s, p) => s + c.partes[p], 0) / LISTA_PECAS.length);
@@ -33,8 +34,8 @@ export function telaOficina(el) {
   </div>`;
   if (S.tutorial) {
     html += `<div class="cartao destaque"><h3>Como funciona</h3>
-      <p>1. Leia os <b>sintomas</b> do cliente e <b>inspecione</b> as peças suspeitas (cada inspeção leva 10 min).</p>
-      <p>2. <b>Troque</b> as peças ruins: você compra a peça e acerta o aperto dos parafusos.</p>
+      <p>1. Leia os <b>sintomas</b> do cliente e leve o carro para o <b>elevador 3D</b>.</p>
+      <p>2. Toque nas peças suspeitas para <b>inspecionar</b>. Para trocar, <b>solte os parafusos</b> um a um, tire a peça, monte a nova e aperte cada parafuso no torque certo. Algumas peças só saem depois de outras (ex.: pneu → pastilha → disco).</p>
       <p>3. <b>Entregue</b> o carro. O cliente paga peça + mão de obra das peças gastas (abaixo de 50%). Trocar peça boa queima sua fama!</p>
       <p>4. Com o dinheiro, prepare seu carro em <b>Tuning</b> e vença as <b>Arrancadas</b>.</p>
       <button class="btn peq" data-acao="fechar-tut">Entendi</button></div>`;
@@ -57,23 +58,17 @@ export function telaOficina(el) {
     <div class="linha" style="margin-top:8px"><div><b>${esc(serv.cliente)}</b> trouxe um <b>${esc(m.nome)}</b></div></div>
     <p class="fraco" style="margin-top:8px">Reclamações do cliente:</p>
     <ul class="sintomas">${serv.sintomas.map(s => `<li>“${esc(s)}”</li>`).join('')}</ul>
-    <div class="botoes">
-      ${S.equip.scanner ? `<button class="btn peq" data-acao="diag" data-eq="scanner">📟 Scanner (10 min)</button>` : ''}
-      ${S.equip.elevador ? `<button class="btn peq" data-acao="diag" data-eq="elevador">🏗️ Elevador (10 min)</button>` : ''}
-    </div>
-  </div>
-  <h3>Peças</h3><div class="grade">`;
-  for (const p of LISTA_PECAS) {
-    const info = PECAS[p], c = serv.carro.partes[p];
-    const conhecido = serv.conhecido[p], trocada = p in serv.trocadas;
-    html += `<div class="peca ${trocada ? 'trocada' : ''}">
-      <div class="nome">${info.icone} ${info.nome}</div>
-      ${conhecido ? `${barra(c)}<div class="linha"><span class="fraco">${c}%</span>${trocada ? '<span class="etiqueta verde">nova</span>' : ''}</div>`
-        : `<div class="desconhecido">Estado desconhecido</div><button class="btn peq" data-acao="inspecionar" data-p="${p}">🔍 Inspecionar</button>`}
-      ${trocada ? '' : `<button class="btn peq" data-acao="trocar" data-p="${p}">Trocar ${dinheiro(precoPeca(p, serv.carro))} · ${tempoPeca(p)}min</button>`}
-    </div>`;
+    <button class="btn pri largo" data-acao="3d" style="margin-top:10px;padding:14px">🔧 Levar para o elevador (oficina 3D)</button>
+  </div>`;
+  const nFora = Object.keys(serv.carro.fora || {}).length;
+  const vistas = LISTA_PECAS.filter(p => serv.conhecido[p]);
+  if (vistas.length) {
+    html += `<h3>Diagnóstico</h3><div class="grade">${vistas.map(p => `<div class="peca ${p in serv.trocadas ? 'trocada' : ''}">
+      <div class="nome">${PECAS[p].icone} ${PECAS[p].nome}</div>${barra(serv.carro.partes[p])}
+      <div class="linha"><span class="fraco">${serv.carro.partes[p]}%</span>${p in serv.trocadas ? '<span class="etiqueta verde">nova</span>' : serv.carro.fora?.[p] ? '<span class="etiqueta vermelha">fora</span>' : ''}</div></div>`).join('')}</div>`;
   }
-  html += `</div><div class="botoes"><button class="btn ok largo" data-acao="entregar">Entregar carro ao cliente ✅</button></div>`;
+  html += `<div class="botoes"><button class="btn ok largo" data-acao="entregar" ${nFora ? 'disabled' : ''}>Entregar carro ao cliente ✅</button></div>
+    ${nFora ? `<p class="fraco" style="color:var(--laranja)">${nFora} peça(s) estão fora do carro: monte tudo antes de entregar.</p>` : ''}`;
   el.innerHTML = html;
   desenharVitrines(el);
 
@@ -96,25 +91,7 @@ export function telaOficina(el) {
       $('#ok').onclick = () => { fecharModal(); atualizar(); };
       atualizar();
     }
-    else if (a === 'inspecionar') {
-      const r = inspecionar(serv, b.dataset.p);
-      if (!r.ok) { erro(); aviso(r.msg); }
-      atualizar();
-    }
-    else if (a === 'diag') {
-      const r = diagnosticar(serv, b.dataset.eq);
-      if (!r.ok) { erro(); aviso(r.msg); }
-      atualizar();
-    }
-    else if (a === 'trocar') {
-      const p = b.dataset.p;
-      const v = podeTrocar(serv.carro, p, true);
-      if (!v.ok) { erro(); aviso(v.msg); return; }
-      const q = await minigameAperto(PECAS[p].nome);
-      aplicarTroca(serv.carro, p, q, serv);
-      aviso(`${rotuloQualidade(q)} (${serv.carro.partes[p]}%)`);
-      atualizar();
-    }
+    else if (a === '3d') abrirOficina3D(serv.carro, serv, atualizar);
     else if (a === 'entregar') {
       const prev = avaliarEntrega(serv);
       const lucro = prev.total - serv.gastoPecas;
@@ -127,6 +104,7 @@ export function telaOficina(el) {
       cx.querySelector('#nao').onclick = fecharModal;
       cx.querySelector('#sim').onclick = () => {
         const r = entregar(serv);
+        if (!r) { fecharModal(); aviso('Monte as peças que estão fora antes de entregar.'); return; }
         somDinheiro();
         abrirModal(`<h2>${r.resolvido ? '😃 Cliente satisfeito!' : '😠 Cliente insatisfeito'}</h2>
           <p>Recebido: <b style="color:var(--verde)">${dinheiro(r.total)}</b></p>
@@ -140,7 +118,6 @@ export function telaOficina(el) {
 }
 
 // ───────────────────────── GARAGEM ─────────────────────────
-const ui2 = { aberto: null };
 export function telaGaragem(el) {
   let html = `<h2>Sua garagem <span class="fraco">(${S.carros.length}/4 vagas)</span></h2>
     <p class="fraco">Conserte e prepare carros do ferro-velho para correr ou revender com lucro. O carro marcado como “ativo” é o que vai para o tuning e a arrancada.</p>`;
@@ -153,15 +130,11 @@ export function telaGaragem(el) {
       <div class="stats"><div><b>${Math.round(cv)}</b><small>cv</small></div><div><b>${media(c)}%</b><small>conservação</small></div><div><b>${c.recorde ? c.recorde.toFixed(2) + 's' : '—'}</b><small>recorde ¼ milha</small></div></div>
       <div class="botoes">
         ${ativo ? '' : `<button class="btn peq pri" data-acao="ativar" data-id="${c.uid}">Usar este</button>`}
-        <button class="btn peq" data-acao="abrir" data-id="${c.uid}">${ui2.aberto === c.uid ? 'Fechar' : '🔧 Mecânica'}</button>
+        <button class="btn peq" data-acao="abrir" data-id="${c.uid}">🔧 Elevador 3D</button>
         ${S.carros.length > 1 ? `<button class="btn peq perigo" data-acao="vender" data-id="${c.uid}">Vender ${dinheiro(valorCarro(c))}</button>` : ''}
       </div>`;
-    if (ui2.aberto === c.uid) {
-      html += `<h3>Peças</h3><div class="grade">${LISTA_PECAS.map(p => `<div class="peca">
-        <div class="nome">${PECAS[p].icone} ${PECAS[p].nome}</div>${barra(c.partes[p])}
-        <div class="linha"><span class="fraco">${c.partes[p]}%</span>
-        ${c.partes[p] < 95 ? `<button class="btn peq" data-acao="trocar" data-id="${c.uid}" data-p="${p}">${dinheiro(precoPeca(p, c))}</button>` : ''}</div></div>`).join('')}</div>`;
-    }
+    const fora = Object.keys(c.fora || {}).length;
+    if (fora) html += `<p style="color:var(--laranja)">${fora} peça(s) fora do carro.</p>`;
     html += `</div>`;
   }
   el.innerHTML = html;
@@ -170,18 +143,11 @@ export function telaGaragem(el) {
     const b = e.target.closest('[data-acao]'); if (!b) return;
     const c = S.carros.find(x => x.uid === b.dataset.id);
     if (b.dataset.acao === 'ativar') { S.ativo = c.uid; salvar(); atualizar(); }
-    else if (b.dataset.acao === 'abrir') { ui2.aberto = ui2.aberto === c.uid ? null : c.uid; atualizar(); }
+    else if (b.dataset.acao === 'abrir') abrirOficina3D(c, null, atualizar);
     else if (b.dataset.acao === 'vender') {
       if (await confirmar('Vender carro?', `Vender o ${esc(modelo(c.modelo).nome)} por ${dinheiro(valorCarro(c))}?`, 'Vender')) {
         somDinheiro(); aviso(`Vendido por ${dinheiro(venderCarro(c.uid))}`); atualizar();
       }
-    } else if (b.dataset.acao === 'trocar') {
-      const p = b.dataset.p, v = podeTrocar(c, p, false);
-      if (!v.ok) { erro(); aviso(v.msg); return; }
-      const q = await minigameAperto(PECAS[p].nome);
-      aplicarTroca(c, p, q, null);
-      aviso(`${rotuloQualidade(q)} (${c.partes[p]}%)`);
-      atualizar();
     }
   };
 }
@@ -341,6 +307,7 @@ export function telaCorrida(el) {
   el.innerHTML = html;
   el.onclick = e => {
     const b = e.target.closest('[data-acao]'); if (!b) return;
+    if (Object.keys(c.fora || {}).length) { erro(); aviso('Há peças fora do carro! Monte tudo no Elevador 3D (Garagem).'); return; }
     if (c.partes.motor < 8) { erro(); aviso('O motor está destruído! Faça a retífica na Garagem.'); return; }
     if (b.dataset.acao === 'treino') iniciarCorrida(c, null, atualizar);
     else {

@@ -17,7 +17,7 @@ export function novoCarro(idModelo, condMin = 70, condMax = 100) {
   LISTA_PECAS.forEach(p => partes[p] = rndi(condMin, condMax));
   const ups = {};
   LISTA_UPGRADES.forEach(u => ups[u] = 0);
-  return { uid: uid(), modelo: idModelo, cor: modelo(idModelo).cor, partes, ups, ecu: null, gasto: 0, recorde: null };
+  return { uid: uid(), modelo: idModelo, cor: modelo(idModelo).cor, partes, ups, ecu: null, gasto: 0, recorde: null, fora: {} };
 }
 
 export function precoPeca(peca, carro) { return Math.round(PECAS[peca].preco * TIER_MULT[modelo(carro.modelo).tier]); }
@@ -144,21 +144,13 @@ export function diagnosticar(serv, equip) {
   return { ok: true };
 }
 
-// Verifica se é possível trocar a peça (antes do minigame).
-export function podeTrocar(carro, peca, cobraTempo) {
-  const preco = precoPeca(peca, carro);
-  if (S.dinheiro < preco) return { ok: false, msg: `Falta dinheiro: a peça custa R$ ${preco}.` };
-  if (cobraTempo && S.hora + tempoPeca(peca) > FIM_DIA) return { ok: false, msg: 'Não dá tempo de fazer essa troca hoje.' };
-  return { ok: true, preco };
-}
-
 // Aplica a troca. qualidade 0..1 vem do minigame do aperto.
 export function aplicarTroca(carro, peca, qualidade, serv) {
   const preco = precoPeca(peca, carro);
   S.dinheiro -= preco;
   carro.partes[peca] = Math.round(70 + 30 * qualidade);
   if (serv) {
-    S.hora += tempoPeca(peca);
+    S.hora += Math.ceil(tempoPeca(peca) / 2); // a outra metade foi na desmontagem
     serv.trocadas[peca] = qualidade;
     serv.conhecido[peca] = true;
     serv.gastoPecas += preco;
@@ -200,6 +192,7 @@ export function avaliarEntrega(serv) {
 }
 
 export function entregar(serv) {
+  if (Object.keys(serv.carro.fora || {}).length) return null;
   const r = avaliarEntrega(serv);
   S.dinheiro += r.total;
   S.rep = clamp(S.rep + r.rep, 0, 5);

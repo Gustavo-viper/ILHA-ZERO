@@ -1,8 +1,8 @@
 // Service worker: guarda todos os arquivos do jogo para funcionar sem internet.
-const VERSAO = 'oficina-turbo-v1';
+const VERSAO = 'oficina-turbo-v2';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
-  'js/main.js', 'js/data.js', 'js/fisica.js', 'js/estado.js', 'js/desenho.js', 'js/som.js', 'js/ui.js', 'js/telas.js', 'js/corrida.js',
+  'js/main.js', 'js/data.js', 'js/fisica.js', 'js/estado.js', 'js/desenho.js', 'js/som.js', 'js/ui.js', 'js/telas.js', 'js/corrida.js', 'js/carro3d.js', 'js/oficina3d.js', 'vendor/three/three.module.min.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
 ];
 

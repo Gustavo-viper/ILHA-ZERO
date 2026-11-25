@@ -143,3 +143,33 @@ input[type=range] { width: 100%; accent-color: var(--laranja); height: 28px; }
   .marca::first-letter { font-size: 1.2rem; }
   .hud { gap: 8px; font-size: .85rem; flex: 1; justify-content: flex-end; }
 }
+
+/* Oficina 3D */
+#o3d { position: fixed; inset: 0; z-index: 45; background: #1a1e25; }
+#o3d-cena { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.o3d-topo { position: absolute; top: 0; left: 0; right: 0; padding: calc(8px + env(safe-area-inset-top)) 10px 8px; display: flex; gap: 10px;
+  align-items: center; background: linear-gradient(#0b0e13ee, #0b0e1300); pointer-events: none; }
+.o3d-topo > * { pointer-events: auto; }
+.o3d-titulo { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.o3d-hora { text-align: right; display: flex; flex-direction: column; font-weight: 700; }
+.o3d-hora small { color: var(--verde); font-size: .8rem; }
+.o3d-ferr { position: absolute; top: calc(58px + env(safe-area-inset-top)); left: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; pointer-events: none; }
+.o3d-ferr > * { pointer-events: auto; }
+.o3d-ferr .btn { background: #1b212cdd; }
+.o3d-sint { background: #1b212cee; border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; font-size: .85rem; max-width: 100%; }
+.o3d-sint summary { cursor: pointer; font-weight: 600; }
+.o3d-sint ul { margin: 6px 0 2px; padding-left: 18px; }
+.o3d-base { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(#0b0e1300, #0b0e13f0 30%); }
+.o3d-painel { background: #1b212cf2; border: 1px solid var(--borda); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.o3d-painel p { margin: 4px 0; font-size: .9rem; }
+.o3d-painel .botoes { margin-top: 6px; }
+.o3d-painel .aperto { margin: 8px 0; }
+.o3d-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.o3d-chips::-webkit-scrollbar { display: none; }
+.chip { flex-shrink: 0; background: #242c3aee; border: 1px solid var(--borda); border-radius: 20px; padding: 6px 10px; font-size: .8rem; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.chip i { font-style: normal; font-size: .7rem; color: #0b0e13; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+.chip.sel { border-color: var(--laranja); background: #3a2a18ee; }
+.chip.fora { border-style: dashed; }
+body.em-3d #abas, body.em-3d #topo, body.em-3d #tela { visibility: hidden; }
+@media (min-width: 720px) { .o3d-base { left: 50%; transform: translateX(-50%); width: 680px; } }

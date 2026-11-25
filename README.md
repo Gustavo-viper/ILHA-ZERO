@@ -1,15 +1,17 @@
 # Oficina Turbo 🔧🏁
 
 Jogo de **oficina mecânica e tunagem de carros** que roda no navegador e funciona **offline** (PWA).
-Sem dependências, sem build: é só HTML, CSS e JavaScript.
+Sem build: é só HTML, CSS e JavaScript, com o [Three.js](https://threejs.org) (licença MIT) incluído em `vendor/three/` para funcionar sem internet.
 
 ## Como se joga
 
-- **Oficina**: cada dia chegam clientes com reclamações (“chiado ao frear”, “não pega de manhã”…).
-  Inspecione as peças (10 min cada), troque as que estão ruins acertando o aperto dos parafusos e entregue o carro.
+- **Oficina 3D**: cada dia chegam clientes com reclamações (“chiado ao frear”, “não pega de manhã”…).
+  O carro sobe no elevador com o capô aberto: gire a câmera, toque nas peças para inspecionar (10 min cada),
+  solte os parafusos um a um, tire a peça, monte a nova e aperte cada parafuso no torque certo.
+  Algumas peças só saem depois de outras (pneu → pastilha → disco; filtro de ar → velas; escapamento → embreagem).
   O cliente paga peça + mão de obra das peças gastas; trocar peça boa ou deixar defeito queima sua fama.
   A oficina fecha às 18:00 e cobra aluguel todo dia.
-- **Garagem**: até 4 carros seus. Conserte, escolha o carro ativo ou venda com lucro.
+- **Garagem**: até 4 carros seus. Desmonte e conserte no elevador 3D, escolha o carro ativo ou venda com lucro.
 - **Tuning**: preparação interna, turbo (3 tamanhos), injeção programável, câmbio, pneus, suspensão, alívio de peso, nitro, aerofólio e pintura.
   No **dinamômetro** você vê a curva de potência e torque e, com a injeção programável, ajusta pressão do turbo,
   avanço de ignição e mistura. Exagerou? **Detonação** estraga o motor.
@@ -47,6 +49,8 @@ Ao alterar arquivos, aumente `VERSAO` em `sw.js` para os aparelhos baixarem a ve
 | `js/estado.js` | Save, economia, clientes, ferro-velho |
 | `js/telas.js` | Telas da oficina, garagem, tuning/dinamômetro, rachas e loja |
 | `js/corrida.js` | Tela da arrancada |
-| `js/desenho.js` | Desenho dos carros em canvas |
+| `js/carro3d.js` | Carro 3D com peças, parafusos e ordem de desmontagem; fotos 3D das listas |
+| `js/oficina3d.js` | Oficina 3D: elevador, câmera orbital, desmontar/montar e torque |
+| `js/desenho.js` | Desenho 2D dos carros (arrancada) |
 | `js/som.js` | Sons sintetizados (Web Audio) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | PWA offline |
