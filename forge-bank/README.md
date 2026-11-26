@@ -16,6 +16,10 @@ Depois abra `http://localhost:8090`. Não há dependências para instalar.
 
 Como o app é só HTML/CSS/JS, também dá para publicar a pasta `public/` em qualquer hospedagem estática (GitHub Pages, Netlify, Vercel).
 
+## Identidade visual
+
+Usa o logo da Forge Studios e a paleta da marca: fundo quase preto arroxeado, roxo neon (`#a63dff` / `#e48cff`) e prata. As cores ficam nas variáveis do topo de `public/styles.css`.
+
 ## O que tem
 
 | Área | Funções |
@@ -42,7 +46,8 @@ forge-bank/
     ├── index.html
     ├── styles.css
     ├── app.js           todo o app: estado, telas e roteamento por hash (#/pix, #/cartao...)
-    ├── icon.svg
+    ├── logo.jpg         logo da Forge Studios (tela de entrada)
+    ├── icon-192.png / icon-512.png   emblema "F" (favicon, ícone do app e do cartão)
     └── manifest.webmanifest   permite "Adicionar à tela inicial" no celular
 ```
 

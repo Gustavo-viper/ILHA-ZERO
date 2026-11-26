@@ -251,8 +251,9 @@
 
   views.welcome = () => {
     app.innerHTML = `<div class="splash">
-      <div class="brand"><img src="icon.svg" alt=""><b>Forge Bank</b></div>
-      <p class="tagline">O banco digital da Forge Studios. Conta, Pix, cartão e caixinha em um só lugar.</p>
+      <img class="logo-hero" src="logo.jpg" alt="Forge Studios">
+      <div class="brand" style="justify-content:center"><b>Forge Bank</b></div>
+      <p class="tagline center">O banco digital da Forge Studios. Conta, Pix, cartão e caixinha em um só lugar.</p>
       <a class="btn" style="display:block;text-align:center;text-decoration:none" href="#/cadastro">Abrir minha conta</a>
       <p class="demo-note">Protótipo: os dados ficam só neste navegador e nenhum dinheiro real é movimentado.</p></div>`;
   };
@@ -311,7 +312,8 @@
     let tries = 0;
     const first = state.user.name.split(' ')[0];
     app.innerHTML = `<div class="splash center">
-      <div class="brand" style="justify-content:center"><img src="icon.svg" alt=""><b>Forge Bank</b></div>
+      <img class="logo-hero logo-sm" src="logo.jpg" alt="Forge Studios" style="width:220px">
+      <div class="brand" style="justify-content:center"><b>Forge Bank</b></div>
       <p class="muted">Olá, ${esc(first)}. Digite seu PIN.</p>${dotsHTML()}<p class="error" id="err"></p>${keypadHTML()}
       <p style="margin-top:22px"><button class="link" id="forgot">Não é você? Sair desta conta</button></p></div>`;
     const pad = bindPin(app, async (pin) => {
@@ -352,7 +354,7 @@
     app.innerHTML = `
       <div class="top">
         <a class="avatar" href="#/perfil" style="text-decoration:none" aria-label="Perfil">${esc(initials)}</a>
-        <div class="hello"><small>Olá,</small><strong>${esc(u.name.split(' ')[0])}</strong></div>
+        <div class="hello"><small><img class="emblem" src="icon-192.png" alt="" style="width:16px;height:16px;border-radius:4px;margin-right:4px">Forge Bank · Olá,</small><strong>${esc(u.name.split(' ')[0])}</strong></div>
         <button class="icon-btn" id="eye" aria-label="${hide ? 'Mostrar' : 'Esconder'} saldo">${hide ? '◌' : '◉'}</button>
         <button class="icon-btn" id="lock" aria-label="Bloquear app">⏻</button>
       </div>
@@ -489,7 +491,7 @@
       if (h & 1) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
     }
     const fp = (fx, fy) => `<rect x="${fx}" y="${fy}" width="7" height="7"/><rect x="${fx + 1}" y="${fy + 1}" width="5" height="5" fill="#fff"/><rect x="${fx + 2}" y="${fy + 2}" width="3" height="3"/>`;
-    return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" fill="#14110f">${cells}${fp(0, 0)}${fp(n - 7, 0)}${fp(0, n - 7)}</svg>`;
+    return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" fill="#0c0712">${cells}${fp(0, 0)}${fp(n - 7, 0)}${fp(0, n - 7)}</svg>`;
   }
 
   views.pixReceber = () => {
@@ -673,7 +675,7 @@
       const num = reveal ? c.number.replace(/(\d{4})(?=\d)/g, '$1 ') : '•••• •••• •••• ' + c.number.slice(-4);
       app.innerHTML = `${top('Cartão')}
         <div class="vcard ${c.blocked ? 'blocked' : ''}">
-          <div class="logo"><span>Forge Bank</span><span>${c.blocked ? 'BLOQUEADO' : 'Virtual'}</span></div>
+          <div class="logo"><span><img src="icon-192.png" alt="" style="vertical-align:middle;margin-right:8px">Forge Bank</span><span>${c.blocked ? 'BLOQUEADO' : 'Virtual'}</span></div>
           <div class="num">${num}</div>
           <div class="meta"><div>Nome<b>${esc(state.user.name.toUpperCase().slice(0, 22))}</b></div>
             <div>Validade<b>${c.exp}</b></div><div>CVV<b>${reveal ? c.cvv : '•••'}</b></div></div>
