@@ -1,0 +1,15 @@
+{
+  "name": "forge-bank",
+  "version": "0.1.0",
+  "description": "Forge Bank: protótipo de app de banco digital da Forge Studios (dados simulados, roda no navegador)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
